@@ -357,7 +357,10 @@ function renderDone(r,scored){
    There is no server behind this page, so there is nothing to send a push from.
    A repeating calendar alarm is the reliable zero-infrastructure version: it fires
    whether or not the app has been opened, and it survives storage being cleared. */
-const IN_ARTIFACT = typeof (window.claude||{}).use === "function";
+const HOSTED = "https://eddysant.github.io/mainichi/";
+/* Checked when the card is drawn, not at load: window.claude may be injected
+   after this script's first run, and guessing wrong would show a dead button. */
+const inArtifact = () => typeof (window.claude||{}).use === "function" || !!docRef;
 function icsFor(hhmm){
   const pad=n=>String(n).padStart(2,"0");
   const bits=hhmm.split(":"), h=Number(bits[0])||0, m=Number(bits[1])||0;
@@ -380,9 +383,21 @@ function icsFor(hhmm){
     "END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
 }
 function setupReminder(){
-  const card=$("remindCard");
-  if(IN_ARTIFACT){card.hidden=true;return}   // artifact viewers cannot be handed a file
+  const card=$("remindCard"), row=card.querySelector(".remind-row"), lead=card.querySelector(".note");
   card.hidden=false;
+  /* The artifact viewer only hands over files in a fixed set of formats, and
+     .ics is not one — so point at the installed copy rather than show a dead button. */
+  if(inArtifact()){
+    row.hidden=true; $("remindNote").hidden=true;
+    lead.className="note";
+    lead.innerHTML='Set the daily alarm in the installed version — <a href="'+HOSTED+
+      '" target="_blank" rel="noopener">'+HOSTED.replace(/^https:\/\//,"").replace(/\/$/,"")+
+      '</a> — which can hand your calendar the file.';
+    return;
+  }
+  row.hidden=false;
+  lead.className="note";
+  lead.textContent="A repeating calendar alarm is the one thing that reliably interrupts a day. Set it once.";
   $("remindTime").value=P.remindAt||"08:00";
   if(P.remindAt)$("remindBtn").textContent="Update reminder";
   $("remindBtn").onclick=()=>{
