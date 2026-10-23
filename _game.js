@@ -15,11 +15,26 @@ function jaNum(n){ if(n<=10&&n>0)return n===10?"十":KANJI_NUM[n];
   if(n<100){const t=Math.floor(n/10),r=n%10;return KANJI_NUM[t]+"十"+(r?KANJI_NUM[r]:"")}
   return String(n)}
 
-/* ---- items ---- */
-const kanaItem=i=>({id:"k"+i,type:"kana",face:KANA[i][0],kana:"",romaji:KANA[i][1],en:"the sound “"+KANA[i][1]+"”"});
-const wordItem=i=>({id:"w"+i,type:"word",face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3]});
-const item=id=>id[0]==="k"?kanaItem(+id.slice(1)):wordItem(+id.slice(1));
-function newIdsFor(l){const o=[];if(l<KANA.length)o.push("k"+l);if(l<WORDS.length)o.push("w"+l);return o}
+/* ---- items ----
+   Id prefixes are baked into the saved review schedule, so they stay as they were:
+   k = hiragana, t = katakana, w = kanji word. */
+const SCRIPTS=[["k","hiragana",KANA],["t","katakana",KATAKANA],["w","kanji",WORDS]];
+const PER_SCRIPT=2;
+const charItem=(p,script,set)=>i=>
+  ({id:p+i,type:"char",script,set,face:set[i][0],kana:"",romaji:set[i][1],en:"the sound “"+set[i][1]+"”"});
+const kanaItem=charItem("k","hiragana",KANA);
+const kataItem=charItem("t","katakana",KATAKANA);
+const wordItem=i=>({id:"w"+i,type:"word",script:"kanji",face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3]});
+const item=id=>{const n=+id.slice(1);return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):wordItem(n)};
+/* The lowest item of each script not yet introduced, rather than the one at the
+   lesson index: that way adding katakana part-way through does not skip ア onwards,
+   and a schedule that drifts for any other reason heals itself. */
+function newToday(){
+  return SCRIPTS.map(([p,,set])=>{
+    for(let i=0;i<set.length;i++)if(!P.srs[p+i])return p+i;
+    return null;
+  }).filter(Boolean);
+}
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
@@ -43,7 +58,6 @@ async function save(){saveLocal();if(docRef){try{await docRef.set(JSON.parse(JSO
 /* ---- spaced repetition: gaps in days, counted in plays ---- */
 const IV=[1,1,2,4,8,16,32,64,120];
 function dueIdsAt(n){return Object.keys(P.srs).filter(k=>P.srs[k].due<=n).sort((a,b)=>P.srs[a].due-P.srs[b].due)}
-function dueIds(){return dueIdsAt(P.plays)}
 function grade(id,ok){
   const s=P.srs[id]||(P.srs[id]={box:0,due:0,seen:0});
   s.box=ok?Math.min(IV.length-1,s.box+1):0;
@@ -54,10 +68,18 @@ function grade(id,ok){
 /* ---- round 2 questions ---- */
 function mkQ(id){
   const it=item(id), seen=(P.srs[id]||{}).seen||0;
-  if(it.type==="kana"){
-    const opts=shuffle([it.romaji].concat(pick(KANA.filter(k=>k[1]!==it.romaji),3).map(k=>k[1])));
-    return{id,q:"Which sound is this?",big:it.face,sub:"",opts,answer:it.romaji,grid:true,ja:false,
-      after:it.face+" = "+it.romaji};
+  if(it.type==="char"){
+    const others=it.set.filter(c=>c[1]!==it.romaji);
+    if(seen%2===0){
+      const opts=shuffle([it.romaji].concat(pick(others,3).map(c=>c[1])));
+      return{id,q:"Which sound is this?",big:it.face,sub:it.script,subRoman:true,opts,answer:it.romaji,
+        grid:true,ja:false,after:it.face+" = "+it.romaji};
+    }
+    /* The other direction. Recognising a character and producing it are different
+       skills, and only this way round catches the pairs that look alike — ツ/シ, ソ/ン. */
+    const opts=shuffle([it.face].concat(pick(others,3).map(c=>c[0])));
+    return{id,q:"Which "+it.script+" is this sound?",big:it.romaji,roman:true,sub:"",opts,answer:it.face,
+      grid:true,ja:true,after:it.romaji+" = "+it.face};
   }
   if(seen%2===0){
     const opts=shuffle([it.en].concat(pick(WORDS.filter(w=>w[3]!==it.en),3).map(w=>w[3])));
@@ -86,12 +108,12 @@ function renderStart(){
   const n=P.lesson+1;
   $("dayN").textContent=n;
   $("dayJa").textContent="第"+jaNum(n)+"日";
-  const d=dueIdsAt((P.plays||0)+1).filter(x=>newIdsFor(P.lesson).indexOf(x)<0).length;
-  const newN=newIdsFor(P.lesson).length;
+  const nw=newToday(), newN=nw.length;
+  const qn=quizIdsFor(nw,(P.plays||0)+1).length;
   let line;
-  if(P.plays===0) line="Three rounds, about fifty seconds. Two new characters today.";
-  else if(d) line="Three rounds, about fifty seconds. "+newN+" new, "+Math.min(d,2)+" up for review.";
-  else line="Three rounds, about fifty seconds. "+(newN?newN+" new today.":"Review only today.");
+  if(P.plays===0) line="Three rounds, about a minute. A hiragana, a katakana and a kanji word to start.";
+  else if(newN) line="Three rounds, about a minute. "+newN+" new, "+qn+" to recall.";
+  else line="Three rounds, about a minute. "+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
   $("go").textContent=P.plays===0?"Start day one":"Start today’s puzzle";
 }
@@ -157,7 +179,8 @@ function teach(){
     if(i>=ids.length)return quiz();
     const it=item(ids[i]);
     show("sc-teach"); pip(1,"live");
-    $("tBadge").textContent=ids.length>1?"New today · "+(i+1)+" of "+ids.length:"New today";
+    $("tBadge").textContent="New today · "+it.script
+      +(ids.length>1?" ("+(i+1)+" of "+ids.length+")":"");
     $("tBig").textContent=it.face;
     $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
     $("tLat").textContent=it.romaji;
@@ -168,8 +191,24 @@ function teach(){
 }
 
 /* ---- round 2: recall ---- */
+/* Two of each script, every day. New material first, then whatever is due, then
+   older items of that script to fill — so the round keeps its shape even on a day
+   when nothing of a given script happens to come up for review. */
+function quizIdsFor(nw,plays){
+  const due=dueIdsAt(plays), out=[];
+  SCRIPTS.forEach(([p])=>{
+    const take=[], add=id=>{if(id[0]===p&&take.indexOf(id)<0&&take.length<PER_SCRIPT)take.push(id)};
+    nw.forEach(add);
+    due.forEach(add);
+    if(take.length<PER_SCRIPT)shuffle(Object.keys(P.srs).filter(id=>id[0]===p)).forEach(add);
+    out.push.apply(out,take);
+  });
+  return out;
+}
 function quiz(){
-  run.qs=shuffle(run.newIds.concat(run.dueIds)).map(mkQ);
+  const ids=quizIdsFor(run.newIds,P.plays);
+  run.dueIds=ids.filter(id=>run.newIds.indexOf(id)<0);
+  run.qs=shuffle(ids).map(mkQ);
   run.r2max=run.qs.length; run.qi=0;
   if(!run.qs.length){pip(1,"done");return r3()}
   nextQ();
@@ -180,8 +219,9 @@ function nextQ(){
   show("sc-recall"); pip(1,"live");
   $("rEyebrow").textContent="Round two · recall "+(run.qi+1)+" of "+run.qs.length;
   $("rQ").textContent=q.q;
-  $("rBig").textContent=q.big;
+  $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"");
   $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
+  $("rSub").className="sub"+(q.subRoman?" roman":"");
   $("rNote").textContent=""; $("rNote").className="note";
   box.className="opts"+(q.grid?" grid2":""); box.innerHTML="";
   let answered=false;
@@ -418,9 +458,9 @@ function setupReminder(){
 /* ---- boot ---- */
 function startRun(scored){
   if(scored)P.plays=(P.plays||0)+1;
-  const l=P.lesson, nw=newIdsFor(l);
+  const l=P.lesson, nw=newToday();
   run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
-       newIds:nw,dueIds:dueIds().filter(x=>nw.indexOf(x)<0).slice(0,2),
+       newIds:nw,dueIds:[],
        r1:0,r2:0,r2max:0,r3:0,qs:[],qi:0};
   $("pips").hidden=false;
   r1();

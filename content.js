@@ -1,4 +1,5 @@
-/* Mainichi — content set. Kana and words are introduced two per day in this order. */
+/* Mainichi — content set. Each day introduces one hiragana, one katakana and one
+   kanji word; round two then drills two of each script. */
 const KANA = [
   ["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],
   ["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],
@@ -10,6 +11,21 @@ const KANA = [
   ["や","ya"],["ゆ","yu"],["よ","yo"],
   ["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],
   ["わ","wa"],["を","wo"],["ん","n"]
+];
+
+/* Katakana in the same gojūon order as the hiragana above, so day N teaches the
+   hiragana and the katakana for one sound together — あ/ア on the same day. */
+const KATAKANA = [
+  ["ア","a"],["イ","i"],["ウ","u"],["エ","e"],["オ","o"],
+  ["カ","ka"],["キ","ki"],["ク","ku"],["ケ","ke"],["コ","ko"],
+  ["サ","sa"],["シ","shi"],["ス","su"],["セ","se"],["ソ","so"],
+  ["タ","ta"],["チ","chi"],["ツ","tsu"],["テ","te"],["ト","to"],
+  ["ナ","na"],["ニ","ni"],["ヌ","nu"],["ネ","ne"],["ノ","no"],
+  ["ハ","ha"],["ヒ","hi"],["フ","fu"],["ヘ","he"],["ホ","ho"],
+  ["マ","ma"],["ミ","mi"],["ム","mu"],["メ","me"],["モ","mo"],
+  ["ヤ","ya"],["ユ","yu"],["ヨ","yo"],
+  ["ラ","ra"],["リ","ri"],["ル","ru"],["レ","re"],["ロ","ro"],
+  ["ワ","wa"],["ヲ","wo"],["ン","n"]
 ];
 
 const WORDS = [
