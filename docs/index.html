@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="A fifty-second daily Japanese puzzle: find the thread, recall two new characters, build one sentence.">
+<meta name="theme-color" content="#f3f4f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131517" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mainichi">
+<style>
+/* matches the base reset the Claude artifact host supplies, so one source builds both */
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<title>Mainichi Japanese</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: one phone-width column on manuscript paper. Three rounds advance in place
+   inside a single card; the streak reads as a row of hanko seals above it. */
+:root{
+  --paper:#f3f4f2;      /* pale cool grey, biased toward the rule indigo */
+  --panel:#fbfbf9;
+  --ink:#16181c;
+  --ink-soft:#5f646d;
+  --ink-faint:#9298a2;
+  --rule-s:#aab6cd;     /* genko yoshi printed rule */
+  --rule-f:#cdd5e3;
+  --line:#dde0da;
+  --shu:#c0402a;        /* hanko vermilion */
+  --shu-soft:#e8d3cd;
+  --ok:#2f6d4f;
+  --ok-soft:#d6e6dc;
+  --no:#a8341f;
+  --no-soft:#f0d9d3;
+  --ja:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --ui:"Zen Kaku Gothic New","Hiragino Sans","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#131517;--panel:#1c1f22;--ink:#eceee9;--ink-soft:#a0a6ac;--ink-faint:#6d737a;
+  --rule-s:#495873;--rule-f:#333c4d;--line:#2a2e33;
+  --shu:#e2674a;--shu-soft:#4a2a22;--ok:#7fc39c;--ok-soft:#1f3a2c;--no:#e5806a;--no-soft:#3d221b;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#131517;--panel:#1c1f22;--ink:#eceee9;--ink-soft:#a0a6ac;--ink-faint:#6d737a;
+  --rule-s:#495873;--rule-f:#333c4d;--line:#2a2e33;
+  --shu:#e2674a;--shu-soft:#4a2a22;--ok:#7fc39c;--ok-soft:#1f3a2c;--no:#e5806a;--no-soft:#3d221b;
+  color-scheme:dark}
+
+html,body{min-height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--ui);-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--shu);outline-offset:2px}
+
+.app{max-width:30rem;margin:0 auto;padding-block:1.25rem 2.5rem;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:1rem}
+
+/* masthead */
+.masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.brand{display:flex;flex-direction:column;gap:.1rem;min-width:0}
+.brand-ja{font-family:var(--ja);font-weight:700;font-size:1.75rem;line-height:1;letter-spacing:.04em}
+.brand-en{font-family:var(--ui);font-size:.6875rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-faint)}
+.streak{display:flex;flex-direction:column;align-items:flex-end;gap:.4rem}
+.streak-row{display:flex;align-items:baseline;gap:.35rem}
+.streak-n{font-family:var(--ja);font-weight:700;font-size:1.5rem;line-height:1;color:var(--shu);font-variant-numeric:tabular-nums}
+.streak-lbl{font-size:.6875rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-faint)}
+.stamps{display:flex;gap:.25rem}
+.stamp{width:1.25rem;height:1.25rem;display:grid;place-items:center;font-family:var(--ja);font-size:.6875rem;
+  border:1px solid var(--rule-f);color:var(--ink-faint);border-radius:2px}
+.stamp.on{background:var(--shu);border-color:var(--shu);color:#fff}
+.stamp.today{box-shadow:0 0 0 2px var(--shu-soft)}
+
+/* round pips */
+.pips{display:flex;align-items:center;gap:.5rem}
+.pip{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.pip span{display:block;height:100%;width:0;background:var(--shu);transition:width .35s ease}
+.pip.done span{width:100%}
+.pip.live span{width:45%}
+
+/* card */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:1.25rem;
+  display:flex;flex-direction:column;gap:1rem}
+.eyebrow{font-size:.6875rem;text-transform:uppercase;letter-spacing:.16em;color:var(--shu);font-weight:500}
+.prompt{font-size:1rem;line-height:1.5;color:var(--ink-soft);margin:0}
+h1,h2{margin:0;font-family:var(--ja);font-weight:700;text-wrap:balance}
+h1{font-size:1.625rem;line-height:1.25}
+h2{font-size:1.125rem;line-height:1.35}
+.hr{height:1px;background:var(--line)}
+
+/* start screen */
+.daymark{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+.daymark .n{font-family:var(--ja);font-weight:700;font-size:2.5rem;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.daymark .ja{font-family:var(--ja);font-size:1rem;color:var(--ink-soft)}
+.plan{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.plan li{display:flex;gap:.65rem;align-items:baseline;font-size:.875rem;color:var(--ink-soft)}
+.plan .k{font-family:var(--ja);color:var(--shu);font-weight:700;width:1.2em;flex:none;text-align:center}
+
+/* genko yoshi clue cells */
+.cells{display:grid;grid-template-columns:repeat(5,1fr);gap:.375rem}
+.cell{aspect-ratio:1;display:grid;place-items:center;position:relative;background:transparent;
+  border:1px solid var(--rule-f);border-radius:1px;overflow:hidden}
+.cell::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(var(--rule-f),var(--rule-f)) center/1px 14% no-repeat,
+             linear-gradient(var(--rule-f),var(--rule-f)) center/14% 1px no-repeat}
+.cell.filled{border-color:var(--rule-s)}
+.cell.filled::after{opacity:0}
+.cell .ja{font-family:var(--ja);font-size:clamp(.8rem,3.6vw,1.1rem);line-height:1.1;text-align:center;padding:.1rem;
+  writing-mode:horizontal-tb;word-break:break-all}
+.reveal{animation:drop .3s ease both}
+@keyframes drop{from{opacity:0;transform:translateY(-.4rem)}to{opacity:1;transform:none}}
+.romaji-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.375rem}
+.romaji-row span{font-size:.5625rem;text-align:center;color:var(--ink-faint);letter-spacing:.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* options */
+.opts{display:flex;flex-direction:column;gap:.5rem}
+.opt{text-align:left;background:transparent;border:1px solid var(--line);border-radius:2px;
+  padding:.75rem .875rem;cursor:pointer;font-size:.9375rem;line-height:1.3;
+  transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--rule-s)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ink)}
+.opt.wrong{border-color:var(--no);background:var(--no-soft);color:var(--ink);text-decoration:line-through}
+.opt.dim{opacity:.45}
+.opts.grid2{display:grid;grid-template-columns:1fr 1fr}
+.opts.grid2 .opt{text-align:center;padding:.875rem .5rem}
+.opt.ja{font-family:var(--ja);font-size:1.1875rem}
+
+/* flash card face */
+.face{display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:1rem 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.face .big{font-family:var(--ja);font-weight:500;font-size:clamp(3rem,16vw,4.5rem);line-height:1}
+.face .sub{font-family:var(--ja);font-size:1rem;color:var(--ink-soft)}
+.face .lat{font-size:.8125rem;color:var(--ink-faint);letter-spacing:.06em}
+.newbadge{display:inline-flex;align-items:center;gap:.3rem;font-size:.625rem;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--shu);border:1px solid var(--shu-soft);border-radius:2px;padding:.15rem .4rem}
+
+/* sentence build */
+.slot{min-height:3.25rem;display:flex;flex-wrap:wrap;gap:.375rem;align-content:flex-start;
+  padding:.5rem;border:1px dashed var(--rule-s);border-radius:2px}
+.slot:empty::before{content:attr(data-hint);font-size:.8125rem;color:var(--ink-faint);align-self:center}
+.tray{display:flex;flex-wrap:wrap;gap:.375rem;min-height:2.5rem}
+.tile{font-family:var(--ja);font-size:1.0625rem;padding:.45rem .7rem;border:1px solid var(--rule-s);
+  border-radius:2px;background:var(--panel);cursor:pointer;line-height:1.2}
+.tile:hover{border-color:var(--shu)}
+.tile.used{visibility:hidden}
+.slot .tile{background:transparent;border-style:solid}
+.slot.bad .tile{border-color:var(--no);color:var(--no)}
+.slot.good{border-style:solid;border-color:var(--ok)}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* buttons */
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:2px;
+  padding:.8rem 1rem;cursor:pointer;font-size:.9375rem;font-weight:500;letter-spacing:.01em}
+.btn:hover{opacity:.9}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--line);font-weight:400}
+.btn.seal{background:var(--shu);border-color:var(--shu);color:#fff}
+.btn-row{display:flex;gap:.5rem;flex-wrap:wrap}
+.btn-row .btn{flex:1;min-width:8rem}
+
+/* feedback line */
+.note{font-size:.8125rem;line-height:1.5;color:var(--ink-soft);margin:0}
+.note b{color:var(--ink);font-weight:500}
+.note.good{color:var(--ok)}
+.note.bad{color:var(--no)}
+
+/* done screen */
+.scoreline{display:flex;align-items:baseline;gap:.5rem}
+.scoreline .big{font-family:var(--ja);font-weight:700;font-size:2.25rem;line-height:1;font-variant-numeric:tabular-nums}
+.scoreline .of{color:var(--ink-faint);font-size:1rem}
+.recap{display:flex;flex-direction:column;gap:.875rem}
+.recap h3{margin:0;font-size:.6875rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint);font-weight:500}
+.rows{display:flex;flex-direction:column;gap:.25rem}
+.row{display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:baseline;font-size:.875rem;
+  padding:.3rem 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .l{font-family:var(--ja);font-size:1.0625rem;min-width:0}
+.row .r{color:var(--ink-soft);min-width:0}
+.row .r i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
+.sent{font-family:var(--ja);font-size:1.125rem;line-height:1.6}
+.foot{text-align:center;font-size:.75rem;color:var(--ink-faint);line-height:1.6}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<main class="app">
+  <header class="masthead">
+    <div class="brand"><span class="brand-ja">毎日</span><span class="brand-en">Mainichi</span></div>
+    <div class="streak">
+      <div class="streak-row"><span class="streak-n" id="streakN">0</span><span class="streak-lbl">day streak</span></div>
+      <div class="stamps" id="stamps"></div>
+    </div>
+  </header>
+
+  <div class="pips" id="pips" hidden>
+    <div class="pip" id="pip0"><span></span></div>
+    <div class="pip" id="pip1"><span></span></div>
+    <div class="pip" id="pip2"><span></span></div>
+  </div>
+
+  <!-- start -->
+  <section class="card" id="sc-start">
+    <div class="daymark"><span class="n" id="dayN">1</span><span class="ja" id="dayJa">第一日</span></div>
+    <p class="prompt" id="startLine">Three rounds, about fifty seconds. Nothing to catch up on.</p>
+    <div class="hr"></div>
+    <ul class="plan">
+      <li><span class="k">一</span><span><b>Find the thread.</b> Five words appear one at a time — say what they share.</span></li>
+      <li><span class="k">二</span><span><b>Recall.</b> Two new characters, plus whatever is due for review today.</span></li>
+      <li><span class="k">三</span><span><b>Build a sentence.</b> Tap the words into order.</span></li>
+    </ul>
+    <button class="btn seal" id="go">Start today’s puzzle</button>
+  </section>
+
+  <!-- round 1: grouping -->
+  <section class="card" id="sc-group" hidden>
+    <div><div class="eyebrow">Round one · find the thread</div><h2 id="gTitle">What do these share?</h2></div>
+    <div class="cells" id="gCells"></div>
+    <div class="romaji-row" id="gRomaji"></div>
+    <div class="opts" id="gOpts"></div>
+    <p class="note" id="gNote">Guess early for more points. A wrong guess turns over the next word.</p>
+    <button class="btn" id="gNext" hidden>Round two</button>
+  </section>
+
+  <!-- teach -->
+  <section class="card" id="sc-teach" hidden>
+    <div><span class="newbadge" id="tBadge">New today</span></div>
+    <div class="face">
+      <div class="big" id="tBig">水</div>
+      <div class="sub" id="tSub">みず</div>
+      <div class="lat" id="tLat">mizu</div>
+    </div>
+    <p class="note" id="tEn"><b>water</b></p>
+    <button class="btn" id="tNext">Got it</button>
+  </section>
+
+  <!-- round 2: recall -->
+  <section class="card" id="sc-recall" hidden>
+    <div><div class="eyebrow" id="rEyebrow">Round two · recall</div><h2 id="rQ">What does this mean?</h2></div>
+    <div class="face">
+      <div class="big" id="rBig">水</div>
+      <div class="sub" id="rSub"></div>
+    </div>
+    <div class="opts" id="rOpts"></div>
+    <p class="note" id="rNote"></p>
+  </section>
+
+  <!-- round 3: build -->
+  <section class="card" id="sc-build" hidden>
+    <div><div class="eyebrow">Round three · build the sentence</div><h2 id="bEn">I drink water.</h2></div>
+    <div class="slot" id="bSlot" data-hint="Tap the words below, in order"></div>
+    <div class="tray" id="bTray"></div>
+    <p class="note" id="bNote">Japanese puts the verb last.</p>
+    <div class="btn-row"><button class="btn quiet" id="bClear">Clear</button><button class="btn" id="bDone" hidden>See today’s card</button></div>
+  </section>
+
+  <!-- done -->
+  <section class="card" id="sc-done" hidden>
+    <div class="eyebrow" id="dEyebrow">Done for today</div>
+    <div class="scoreline"><span class="big" id="dScore">0</span><span class="of" id="dOf">/ 12</span><span class="of" id="dGrade"></span></div>
+    <p class="note" id="dStreak"></p>
+    <div class="hr"></div>
+    <div class="recap">
+      <div><h3 id="dGroupH">The thread</h3><div class="rows" id="dGroupRows"></div></div>
+      <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
+      <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
+      <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
+    </div>
+    <div class="hr"></div>
+    <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button></div>
+    <p class="foot" id="dFoot"></p>
+  </section>
+
+  <p class="foot" id="syncFoot"></p>
+</main>
+<script>
+/* Mainichi — content set. Kana and words are introduced two per day in this order. */
+const KANA = [
+  ["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],
+  ["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],
+  ["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],
+  ["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],
+  ["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],
+  ["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],
+  ["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],
+  ["や","ya"],["ゆ","yu"],["よ","yo"],
+  ["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],
+  ["わ","wa"],["を","wo"],["ん","n"]
+];
+
+const WORDS = [
+  ["水","みず","mizu","water"],
+  ["猫","ねこ","neko","cat"],
+  ["犬","いぬ","inu","dog"],
+  ["本","ほん","hon","book"],
+  ["山","やま","yama","mountain"],
+  ["川","かわ","kawa","river"],
+  ["人","ひと","hito","person"],
+  ["空","そら","sora","sky"],
+  ["海","うみ","umi","sea"],
+  ["雨","あめ","ame","rain"],
+  ["雪","ゆき","yuki","snow"],
+  ["風","かぜ","kaze","wind"],
+  ["花","はな","hana","flower"],
+  ["魚","さかな","sakana","fish"],
+  ["鳥","とり","tori","bird"],
+  ["馬","うま","uma","horse"],
+  ["木","き","ki","tree"],
+  ["月","つき","tsuki","moon"],
+  ["車","くるま","kuruma","car"],
+  ["家","いえ","ie","house"],
+  ["駅","えき","eki","station"],
+  ["町","まち","machi","town"],
+  ["店","みせ","mise","shop"],
+  ["道","みち","michi","road"],
+  ["学校","がっこう","gakkou","school"],
+  ["大学","だいがく","daigaku","university"],
+  ["先生","せんせい","sensei","teacher"],
+  ["学生","がくせい","gakusei","student"],
+  ["友達","ともだち","tomodachi","friend"],
+  ["名前","なまえ","namae","name"],
+  ["母","はは","haha","mother"],
+  ["父","ちち","chichi","father"],
+  ["姉","あね","ane","older sister"],
+  ["兄","あに","ani","older brother"],
+  ["妹","いもうと","imouto","younger sister"],
+  ["弟","おとうと","otouto","younger brother"],
+  ["手","て","te","hand"],
+  ["足","あし","ashi","leg, foot"],
+  ["目","め","me","eye"],
+  ["耳","みみ","mimi","ear"],
+  ["口","くち","kuchi","mouth"],
+  ["頭","あたま","atama","head"],
+  ["白","しろ","shiro","white"],
+  ["黒","くろ","kuro","black"],
+  ["赤","あか","aka","red"],
+  ["青","あお","ao","blue"],
+  ["今","いま","ima","now"],
+  ["今日","きょう","kyou","today"],
+  ["明日","あした","ashita","tomorrow"],
+  ["昨日","きのう","kinou","yesterday"],
+  ["毎日","まいにち","mainichi","every day"],
+  ["時間","じかん","jikan","time"],
+  ["何","なに","nani","what"],
+  ["誰","だれ","dare","who"],
+  ["ご飯","ごはん","gohan","rice, a meal"],
+  ["肉","にく","niku","meat"],
+  ["野菜","やさい","yasai","vegetable"],
+  ["お茶","おちゃ","ocha","tea"],
+  ["電車","でんしゃ","densha","train"],
+  ["食べる","たべる","taberu","to eat"],
+  ["飲む","のむ","nomu","to drink"],
+  ["行く","いく","iku","to go"],
+  ["来る","くる","kuru","to come"],
+  ["見る","みる","miru","to see, to watch"],
+  ["読む","よむ","yomu","to read"],
+  ["書く","かく","kaku","to write"],
+  ["聞く","きく","kiku","to listen, to ask"],
+  ["話す","はなす","hanasu","to speak"],
+  ["買う","かう","kau","to buy"],
+  ["大きい","おおきい","ookii","big"],
+  ["小さい","ちいさい","chiisai","small"],
+  ["高い","たかい","takai","tall, expensive"],
+  ["安い","やすい","yasui","cheap"],
+  ["新しい","あたらしい","atarashii","new"],
+  ["古い","ふるい","furui","old"],
+  ["長い","ながい","nagai","long"],
+  ["早い","はやい","hayai","early"],
+  ["春","はる","haru","spring"],
+  ["夏","なつ","natsu","summer"],
+  ["秋","あき","aki","autumn"],
+  ["冬","ふゆ","fuyu","winter"]
+];
+
+/* Tiles are tapped into order. Each sentence is grammatical as written. */
+const SENTENCES = [
+  [["わたし","は","がくせい","です"],"I am a student.","は marks the topic — what the sentence is about."],
+  [["これ","は","ほん","です"],"This is a book.","これ is “this thing, near me”."],
+  [["みず","を","のみます"],"I drink water.","を marks the direct object: the thing the verb acts on."],
+  [["がっこう","に","いきます"],"I go to school.","に marks the destination."],
+  [["ねこ","が","います"],"There is a cat.","います is used for living things; あります for objects."],
+  [["にく","を","たべません"],"I don’t eat meat.","-ません is the polite negative ending."],
+  [["あした","とうきょう","へ","いきます"],"I’m going to Tokyo tomorrow.","へ also marks direction, slightly softer than に."],
+  [["この","ほん","は","たかい","です"],"This book is expensive.","この attaches to a noun; これ stands alone."],
+  [["ともだち","と","はなします"],"I talk with a friend.","と means “with” (or “and” between nouns)."],
+  [["なまえ","は","なん","です","か"],"What is your name?","か at the end turns a statement into a question."],
+  [["えき","は","どこ","です","か"],"Where is the station?","Question words sit where the answer would go."],
+  [["まいにち","にほんご","を","べんきょうします"],"I study Japanese every day.","Time words like まいにち come early in the sentence."],
+  [["あめ","が","ふって","います"],"It’s raining.","-て います describes an action in progress."],
+  [["わたし","の","いぬ","は","しろい","です"],"My dog is white.","の links two nouns: A の B is “B of A”."],
+  [["ごはん","を","たべました"],"I ate a meal.","-ました is the polite past ending."],
+  [["せんせい","に","ききます"],"I’ll ask the teacher.","に also marks the person you direct an action at."],
+  [["あの","みせ","は","あたらしい","です"],"That shop is new.","あの is “that over there”, away from both of us."],
+  [["きのう","えいが","を","みました"],"I watched a film yesterday.","The verb always lands at the end."],
+  [["おちゃ","を","かいました"],"I bought tea.","Same frame as のみます — only the verb changes."],
+  [["いま","なんじ","です","か"],"What time is it now?","なんじ literally asks “what hour”."],
+  [["でんしゃ","で","いきます"],"I’ll go by train.","で marks the means: by train, with a pen."],
+  [["にほん","の","たべもの","が","すき","です"],"I like Japanese food.","What you like is marked with が, not を."],
+  [["やま","が","おおきい","です"],"The mountain is big.","が marks the subject when it is new information."],
+  [["ともだち","が","きます"],"A friend is coming.","きます is the polite form of くる."],
+  [["ほん","を","よみます"],"I read a book.","を + verb is the core of most Japanese sentences."]
+];
+
+const CATEGORIES = [
+  "Numbers 1–5","Animals","Colours","Days of the week","Particles",
+  "Family members","Food","Parts of the body","Words about time","Verbs of movement",
+  "Weather","Places in town","Size and price","Drinks","The five vowels",
+  "Katakana loanwords","Question words","Seasons","Counting things","Nature words",
+  "Polite verb endings","Parts of a house","School subjects","Clothing"
+];
+
+/* Five clues, revealed one at a time. Guess what they share. */
+const GROUPS = [
+  { answer:"Numbers 1–5", clues:[["いち","ichi","one"],["に","ni","two"],["さん","san","three"],["し","shi","four"],["ご","go","five"]] },
+  { answer:"Animals", clues:[["ねこ","neko","cat"],["いぬ","inu","dog"],["とり","tori","bird"],["さかな","sakana","fish"],["うま","uma","horse"]] },
+  { answer:"Colours", clues:[["あか","aka","red"],["あお","ao","blue"],["しろ","shiro","white"],["くろ","kuro","black"],["きいろ","kiiro","yellow"]] },
+  { answer:"Days of the week", clues:[["にちようび","nichiyoubi","Sunday"],["げつようび","getsuyoubi","Monday"],["かようび","kayoubi","Tuesday"],["すいようび","suiyoubi","Wednesday"],["もくようび","mokuyoubi","Thursday"]] },
+  { answer:"Particles", clues:[["は","wa","topic marker"],["を","o","object marker"],["に","ni","to, at"],["が","ga","subject marker"],["で","de","by means of"]] },
+  { answer:"Family members", clues:[["はは","haha","mother"],["ちち","chichi","father"],["あね","ane","older sister"],["あに","ani","older brother"],["いもうと","imouto","younger sister"]] },
+  { answer:"Food", clues:[["ごはん","gohan","rice, a meal"],["パン","pan","bread"],["にく","niku","meat"],["さかな","sakana","fish"],["やさい","yasai","vegetables"]] },
+  { answer:"Parts of the body", clues:[["あたま","atama","head"],["て","te","hand"],["あし","ashi","leg"],["め","me","eye"],["みみ","mimi","ear"]] },
+  { answer:"Words about time", clues:[["いま","ima","now"],["あした","ashita","tomorrow"],["きのう","kinou","yesterday"],["きょう","kyou","today"],["まいにち","mainichi","every day"]] },
+  { answer:"Verbs of movement", clues:[["いきます","ikimasu","go"],["きます","kimasu","come"],["かえります","kaerimasu","return home"],["あるきます","arukimasu","walk"],["はしります","hashirimasu","run"]] },
+  { answer:"Weather", clues:[["あめ","ame","rain"],["ゆき","yuki","snow"],["かぜ","kaze","wind"],["くもり","kumori","cloudy"],["はれ","hare","clear skies"]] },
+  { answer:"Places in town", clues:[["えき","eki","station"],["がっこう","gakkou","school"],["びょういん","byouin","hospital"],["ぎんこう","ginkou","bank"],["としょかん","toshokan","library"]] },
+  { answer:"Size and price", clues:[["おおきい","ookii","big"],["ちいさい","chiisai","small"],["たかい","takai","expensive"],["やすい","yasui","cheap"],["ながい","nagai","long"]] },
+  { answer:"Drinks", clues:[["みず","mizu","water"],["おちゃ","ocha","tea"],["コーヒー","koohii","coffee"],["ぎゅうにゅう","gyuunyuu","milk"],["ビール","biiru","beer"]] },
+  { answer:"The five vowels", clues:[["あ","a","a"],["い","i","i"],["う","u","u"],["え","e","e"],["お","o","o"]] },
+  { answer:"Katakana loanwords", clues:[["テレビ","terebi","television"],["パン","pan","bread"],["コーヒー","koohii","coffee"],["タクシー","takushii","taxi"],["カメラ","kamera","camera"]] },
+  { answer:"Question words", clues:[["なに","nani","what"],["だれ","dare","who"],["どこ","doko","where"],["いつ","itsu","when"],["いくら","ikura","how much"]] },
+  { answer:"Seasons", clues:[["はる","haru","spring"],["なつ","natsu","summer"],["あき","aki","autumn"],["ふゆ","fuyu","winter"],["つゆ","tsuyu","the rainy season"]] },
+  { answer:"Counting things", clues:[["ひとつ","hitotsu","one thing"],["ふたつ","futatsu","two things"],["みっつ","mittsu","three things"],["よっつ","yottsu","four things"],["いつつ","itsutsu","five things"]] },
+  { answer:"Nature words", clues:[["やま","yama","mountain"],["かわ","kawa","river"],["うみ","umi","sea"],["そら","sora","sky"],["もり","mori","forest"]] }
+];
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const SCREENS=["sc-start","sc-group","sc-teach","sc-recall","sc-build","sc-done"];
+const show=id=>SCREENS.forEach(s=>{$(s).hidden=(s!==id)});
+const DAY=864e5;
+const dstr=d=>d.toLocaleDateString("en-CA");
+const today=()=>dstr(new Date());
+const yesterday=()=>dstr(new Date(Date.now()-DAY));
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function pick(a,n){return shuffle(a).slice(0,n)}
+const KANJI_NUM=["〇","一","二","三","四","五","六","七","八","九"];
+function jaNum(n){ if(n<=10&&n>0)return n===10?"十":KANJI_NUM[n];
+  if(n<20)return "十"+KANJI_NUM[n-10];
+  if(n<100){const t=Math.floor(n/10),r=n%10;return KANJI_NUM[t]+"十"+(r?KANJI_NUM[r]:"")}
+  return String(n)}
+
+/* ---- items ---- */
+const kanaItem=i=>({id:"k"+i,type:"kana",face:KANA[i][0],kana:"",romaji:KANA[i][1],en:"the sound “"+KANA[i][1]+"”"});
+const wordItem=i=>({id:"w"+i,type:"word",face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3]});
+const item=id=>id[0]==="k"?kanaItem(+id.slice(1)):wordItem(+id.slice(1));
+function newIdsFor(l){const o=[];if(l<KANA.length)o.push("k"+l);if(l<WORDS.length)o.push("w"+l);return o}
+
+/* ---- progress ---- */
+const blank=()=>({v:1,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
+let P=blank(), run=null, docRef=null;
+const LS="mainichi.v1";
+function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(P))}catch(e){}}
+async function initCloud(){
+  try{
+    const u=await window.claude?.use?.("user"); if(!u)return false;
+    const db=await window.claude?.use?.("db"); if(!db)return false;
+    const id=await u.id(); if(!id)return false;
+    docRef=db.doc("data/users/"+id+"/progress");
+    const s=await docRef.get();
+    if(s.exists){const d=s.data();if(d&&typeof d.plays==="number"&&d.plays>=(P.plays||0))P=Object.assign(blank(),d)}
+    return true;
+  }catch(e){return false}
+}
+async function save(){saveLocal();if(docRef){try{await docRef.set(JSON.parse(JSON.stringify(P)))}catch(e){}}}
+
+/* ---- spaced repetition: gaps in days, counted in plays ---- */
+const IV=[1,1,2,4,8,16,32,64,120];
+function dueIdsAt(n){return Object.keys(P.srs).filter(k=>P.srs[k].due<=n).sort((a,b)=>P.srs[a].due-P.srs[b].due)}
+function dueIds(){return dueIdsAt(P.plays)}
+function grade(id,ok){
+  const s=P.srs[id]||(P.srs[id]={box:0,due:0,seen:0});
+  s.box=ok?Math.min(IV.length-1,s.box+1):0;
+  s.seen=(s.seen||0)+1;
+  s.due=P.plays+IV[s.box];
+}
+
+/* ---- round 2 questions ---- */
+function mkQ(id){
+  const it=item(id), seen=(P.srs[id]||{}).seen||0;
+  if(it.type==="kana"){
+    const opts=shuffle([it.romaji].concat(pick(KANA.filter(k=>k[1]!==it.romaji),3).map(k=>k[1])));
+    return{id,q:"Which sound is this?",big:it.face,sub:"",opts,answer:it.romaji,grid:true,ja:false,
+      after:it.face+" = "+it.romaji};
+  }
+  if(seen%2===0){
+    const opts=shuffle([it.en].concat(pick(WORDS.filter(w=>w[3]!==it.en),3).map(w=>w[3])));
+    return{id,q:"What does this mean?",big:it.face,sub:it.kana,opts,answer:it.en,grid:false,ja:false,
+      after:it.face+" ("+it.kana+") — "+it.en};
+  }
+  const opts=shuffle([it.kana].concat(pick(WORDS.filter(w=>w[1]!==it.kana),3).map(w=>w[1])));
+  return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
+    after:it.face+" = "+it.kana+" ("+it.romaji+") — "+it.en};
+}
+
+/* ---- chrome ---- */
+function pip(i,state){const el=$("pip"+i);el.className="pip"+(state?" "+state:"")}
+function paintStreak(){
+  $("streakN").textContent=P.streak||0;
+  const h=new Set(P.history||[]), box=$("stamps");
+  box.innerHTML="";
+  for(let i=6;i>=0;i--){
+    const d=dstr(new Date(Date.now()-i*DAY)), s=document.createElement("div");
+    s.className="stamp"+(h.has(d)?" on":"")+(i===0?" today":"");
+    s.textContent="日"; s.title=d;
+    box.appendChild(s);
+  }
+}
+function renderStart(){
+  const n=P.lesson+1;
+  $("dayN").textContent=n;
+  $("dayJa").textContent="第"+jaNum(n)+"日";
+  const d=dueIdsAt((P.plays||0)+1).filter(x=>newIdsFor(P.lesson).indexOf(x)<0).length;
+  const newN=newIdsFor(P.lesson).length;
+  let line;
+  if(P.plays===0) line="Three rounds, about fifty seconds. Two new characters today.";
+  else if(d) line="Three rounds, about fifty seconds. "+newN+" new, "+Math.min(d,2)+" up for review.";
+  else line="Three rounds, about fifty seconds. "+(newN?newN+" new today.":"Review only today.");
+  $("startLine").textContent=line;
+  $("go").textContent=P.plays===0?"Start day one":"Start today’s puzzle";
+}
+
+/* ---- round 1: grouping ---- */
+function r1(){
+  show("sc-group"); pip(0,"live"); pip(1,""); pip(2,"");
+  const g=run.g, cells=$("gCells"), rom=$("gRomaji"), box=$("gOpts");
+  let revealed=1, wrong=0, solved=false;
+  cells.innerHTML=""; rom.innerHTML="";
+  g.clues.forEach(()=>{
+    const d=document.createElement("div"); d.className="cell";
+    d.innerHTML='<span class="ja"></span>'; cells.appendChild(d);
+    rom.appendChild(document.createElement("span"));
+  });
+  function paint(){
+    [...cells.children].forEach((d,i)=>{
+      if(i<revealed&&!d.classList.contains("filled")){
+        d.classList.add("filled","reveal");
+        d.querySelector(".ja").textContent=g.clues[i][0];
+        rom.children[i].textContent=g.clues[i][1];
+      }
+    });
+  }
+  paint();
+  $("gTitle").textContent="What do these share?";
+  $("gNote").className="note";
+  $("gNote").textContent="Guess early for more points. A wrong guess turns over the next word.";
+  $("gNext").hidden=true;
+  box.className="opts"; box.innerHTML="";
+  shuffle([g.answer].concat(pick(CATEGORIES.filter(c=>c!==g.answer),3))).forEach(o=>{
+    const b=document.createElement("button");
+    b.className="opt"; b.textContent=o;
+    b.onclick=()=>{
+      if(solved)return;
+      if(o===g.answer){
+        solved=true; revealed=g.clues.length; paint();
+        b.classList.add("right");
+        [...box.children].forEach(x=>{x.disabled=true;if(x!==b&&!x.classList.contains("wrong"))x.classList.add("dim")});
+        g.clues.forEach((c,i)=>{rom.children[i].textContent=c[2]});
+        run.r1=Math.max(1,5-wrong);
+        $("gNote").className="note good";
+        $("gNote").innerHTML="<b>"+esc(g.answer)+"</b> — "+run.r1+" of 5.";
+        $("gNext").hidden=false; pip(0,"done");
+      }else{
+        wrong++; b.classList.add("wrong"); b.disabled=true;
+        if(revealed<g.clues.length){revealed++; paint()}
+        $("gNote").className="note bad";
+        $("gNote").textContent="Not that. Another word turned over.";
+      }
+    };
+    box.appendChild(b);
+  });
+  $("gNext").onclick=teach;
+}
+
+/* ---- teach new items ---- */
+function teach(){
+  const ids=run.newIds.filter(id=>!P.srs[id]);
+  if(!ids.length)return quiz();
+  let i=0;
+  (function one(){
+    if(i>=ids.length)return quiz();
+    const it=item(ids[i]);
+    show("sc-teach"); pip(1,"live");
+    $("tBadge").textContent=ids.length>1?"New today · "+(i+1)+" of "+ids.length:"New today";
+    $("tBig").textContent=it.face;
+    $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
+    $("tLat").textContent=it.romaji;
+    $("tEn").innerHTML="<b>"+esc(it.en)+"</b>";
+    $("tNext").textContent=i<ids.length-1?"Next":"Try it";
+    $("tNext").onclick=()=>{i++;one()};
+  })();
+}
+
+/* ---- round 2: recall ---- */
+function quiz(){
+  run.qs=shuffle(run.newIds.concat(run.dueIds)).map(mkQ);
+  run.r2max=run.qs.length; run.qi=0;
+  if(!run.qs.length){pip(1,"done");return r3()}
+  nextQ();
+}
+function nextQ(){
+  if(run.qi>=run.qs.length){pip(1,"done");return r3()}
+  const q=run.qs[run.qi], box=$("rOpts");
+  show("sc-recall"); pip(1,"live");
+  $("rEyebrow").textContent="Round two · recall "+(run.qi+1)+" of "+run.qs.length;
+  $("rQ").textContent=q.q;
+  $("rBig").textContent=q.big;
+  $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
+  $("rNote").textContent=""; $("rNote").className="note";
+  box.className="opts"+(q.grid?" grid2":""); box.innerHTML="";
+  let answered=false;
+  q.opts.forEach(o=>{
+    const b=document.createElement("button");
+    b.className="opt"+(q.ja?" ja":""); b.textContent=o;
+    b.onclick=()=>{
+      if(answered)return; answered=true;
+      const ok=(o===q.answer);
+      [...box.children].forEach(x=>{
+        x.disabled=true;
+        if(x.textContent===q.answer)x.classList.add("right");
+        else if(x===b)x.classList.add("wrong");
+        else x.classList.add("dim");
+      });
+      if(ok)run.r2++;
+      if(run.scored)grade(q.id,ok);
+      $("rNote").className="note "+(ok?"good":"bad");
+      $("rNote").textContent=q.after;
+      setTimeout(()=>{run.qi++;nextQ()},ok?750:1900);
+    };
+    box.appendChild(b);
+  });
+}
+
+/* ---- round 3: build ---- */
+function r3(){
+  show("sc-build"); pip(2,"live");
+  const s=SENTENCES[run.sIdx], words=s[0], slot=$("bSlot"), tray=$("bTray");
+  let tries=0, done=false;
+  $("bEn").textContent=s[1];
+  $("bNote").className="note"; $("bNote").textContent="Tap the words into order.";
+  slot.innerHTML=""; slot.className="slot"; tray.innerHTML="";
+  $("bDone").hidden=true; $("bClear").hidden=false;
+  let order=shuffle(words);
+  if(words.length>1&&order.join("|")===words.join("|"))order=shuffle(words);
+  const trayBtns=order.map(t=>{
+    const b=document.createElement("button");
+    b.className="tile"; b.textContent=t;
+    b.onclick=()=>{
+      if(done||b.classList.contains("used"))return;
+      b.classList.add("used");
+      const p=document.createElement("button");
+      p.className="tile"; p.textContent=t;
+      p.onclick=()=>{if(done)return;p.remove();b.classList.remove("used");slot.className="slot"};
+      slot.appendChild(p); check();
+    };
+    tray.appendChild(b); return b;
+  });
+  function check(){
+    const c=[...slot.children].map(x=>x.textContent);
+    if(c.length<words.length)return;
+    if(c.join("|")===words.join("|")){
+      done=true; slot.className="slot good";
+      run.r3=Math.max(1,3-tries);
+      $("bNote").className="note good";
+      $("bNote").innerHTML="<b>"+esc(words.join(""))+"</b> · "+esc(s[2]);
+      $("bDone").hidden=false; $("bClear").hidden=true; pip(2,"done");
+    }else{
+      tries++;
+      slot.className="slot bad shake";
+      setTimeout(()=>slot.classList.remove("shake"),320);
+      $("bNote").className="note bad";
+      $("bNote").textContent="Not that order. Tap a word to take it back.";
+    }
+  }
+  $("bClear").onclick=()=>{
+    if(done)return;
+    slot.innerHTML=""; slot.className="slot";
+    trayBtns.forEach(b=>b.classList.remove("used"));
+  };
+  $("bDone").onclick=finish;
+}
+
+/* ---- finish ---- */
+async function finish(){
+  const r={date:today(),lesson:run.lesson,score:run.r1+run.r2+run.r3,max:5+run.r2max+3,
+           gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds};
+  const scored=run.scored;
+  if(scored){
+    if(P.last===yesterday())P.streak=(P.streak||0)+1;
+    else if(P.last!==r.date)P.streak=1;
+    P.last=r.date;
+    P.best=Math.max(P.best||0,P.streak);
+    P.history=Array.from(new Set((P.history||[]).concat([r.date]))).slice(-60);
+    P.lesson=run.lesson+1;
+    P.lastRun=r;
+    await save();
+  }
+  run=null;
+  paintStreak();
+  renderDone(r,scored);
+}
+function rowsInto(el,pairs){
+  el.innerHTML="";
+  pairs.forEach(([l,r])=>{
+    const d=document.createElement("div"); d.className="row";
+    const a=document.createElement("div"); a.className="l"; a.textContent=l;
+    const b=document.createElement("div"); b.className="r"; b.innerHTML=r;
+    d.appendChild(a); d.appendChild(b); el.appendChild(d);
+  });
+}
+function renderDone(r,scored){
+  show("sc-done"); pip(0,"done"); pip(1,"done"); pip(2,"done");
+  const pct=r.score/r.max;
+  $("dEyebrow").textContent=scored?"Done for today":"Practice run · not scored";
+  $("dScore").textContent=r.score;
+  $("dOf").textContent="/ "+r.max;
+  $("dGrade").textContent=pct===1?"· clean sweep":pct>=.85?"· strong":pct>=.6?"· solid":"· it’ll stick tomorrow";
+  $("dStreak").innerHTML=scored
+    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."
+    : "Streak and review schedule left untouched.";
+  const g=GROUPS[r.gIdx];
+  $("dGroupH").textContent="The thread — "+g.answer;
+  rowsInto($("dGroupRows"),g.clues.map(c=>[c[0],esc(c[2])+" <i>"+esc(c[1])+"</i>"]));
+  rowsInto($("dNewRows"),(r.newIds||[]).map(id=>{
+    const it=item(id);
+    return [it.face,esc(it.en)+" <i>"+esc(it.kana?it.kana+" · "+it.romaji:it.romaji)+"</i>"];
+  }));
+  const practised=(r.newIds||[]).concat(r.dueIds||[]);
+  rowsInto($("dDueRows"),practised.map(id=>{
+    const it=item(id), s=P.srs[id];
+    const gap=s?Math.max(1,s.due-P.plays):1;
+    return [it.face,"in "+gap+(gap===1?" day":" days")];
+  }));
+  const s=SENTENCES[r.sIdx];
+  $("dSent").textContent=s[0].join("");
+  $("dSentEn").textContent=s[1];
+  $("dSentWhy").innerHTML="<b>"+esc(s[2])+"</b>";
+  $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow.";
+}
+
+/* ---- boot ---- */
+function startRun(scored){
+  if(scored)P.plays=(P.plays||0)+1;
+  const l=P.lesson, nw=newIdsFor(l);
+  run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
+       newIds:nw,dueIds:dueIds().filter(x=>nw.indexOf(x)<0).slice(0,2),
+       r1:0,r2:0,r2max:0,r3:0,qs:[],qi:0};
+  $("pips").hidden=false;
+  r1();
+}
+function refresh(){
+  if(run)return;
+  paintStreak();
+  if(P.lastRun&&P.lastRun.date===today()){$("pips").hidden=false;renderDone(P.lastRun,true)}
+  else{$("pips").hidden=true;renderStart();show("sc-start")}
+}
+$("go").onclick=()=>startRun(true);
+$("again").onclick=()=>startRun(false);
+
+const local=loadLocal(); if(local)P=local;
+refresh();
+initCloud().then(ok=>{
+  $("syncFoot").textContent=ok
+    ? "Progress is saved to your Claude account, so it follows you between devices."
+    : "Progress is saved in this browser only.";
+  refresh();
+});
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
