@@ -22,7 +22,7 @@ const item=id=>id[0]==="k"?kanaItem(+id.slice(1)):wordItem(+id.slice(1));
 function newIdsFor(l){const o=[];if(l<KANA.length)o.push("k"+l);if(l<WORDS.length)o.push("w"+l);return o}
 
 /* ---- progress ---- */
-const blank=()=>({v:1,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
+const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -207,52 +207,89 @@ function nextQ(){
   });
 }
 
-/* ---- round 3: build ---- */
+/* ---- round 3: build ----
+   The old version hid the word meanings AND the word order, so the only strategy
+   left was permuting until it turned green. Now every tile carries its meaning,
+   every slot states the job it wants, and a wrong tap is refused on the spot with
+   the reason — which is where the grammar actually gets taught. */
 function r3(){
   show("sc-build"); pip(2,"live");
-  const s=SENTENCES[run.sIdx], words=s[0], slot=$("bSlot"), tray=$("bTray");
-  let tries=0, done=false;
-  $("bEn").textContent=s[1];
-  $("bNote").className="note"; $("bNote").textContent="Tap the words into order.";
-  slot.innerHTML=""; slot.className="slot"; tray.innerHTML="";
-  $("bDone").hidden=true; $("bClear").hidden=false;
-  let order=shuffle(words);
-  if(words.length>1&&order.join("|")===words.join("|"))order=shuffle(words);
-  const trayBtns=order.map(t=>{
-    const b=document.createElement("button");
-    b.className="tile"; b.textContent=t;
-    b.onclick=()=>{
-      if(done||b.classList.contains("used"))return;
-      b.classList.add("used");
-      const p=document.createElement("button");
-      p.className="tile"; p.textContent=t;
-      p.onclick=()=>{if(done)return;p.remove();b.classList.remove("used");slot.className="slot"};
-      slot.appendChild(p); check();
-    };
-    tray.appendChild(b); return b;
+  const s=SENTENCES[run.sIdx], T=s.tiles, slots=$("bSlots"), tray=$("bTray");
+  let at=0, slips=0, done=false;
+  $("bEn").textContent=s.en;
+  $("bPattern").textContent=s.pattern;
+  $("bWhy").className="note"; $("bWhy").textContent=s.note;
+  $("bNote").className="note"; $("bNote").textContent="Tap each word into the slot that wants it.";
+  $("bDone").hidden=true;
+  slots.innerHTML=""; tray.innerHTML="";
+
+  const slotEls=T.map((t,i)=>{
+    const d=document.createElement("div"); d.className="sl";
+    const l=document.createElement("div"); l.className="lbl"; l.textContent=t[2];
+    const box=document.createElement("div"); box.className="box";
+    box.onclick=()=>undo(i);
+    d.appendChild(l); d.appendChild(box); slots.appendChild(d);
+    return d;
   });
-  function check(){
-    const c=[...slot.children].map(x=>x.textContent);
-    if(c.length<words.length)return;
-    if(c.join("|")===words.join("|")){
-      done=true; slot.className="slot good";
-      run.r3=Math.max(1,3-tries);
-      $("bNote").className="note good";
-      $("bNote").innerHTML="<b>"+esc(words.join(""))+"</b> · "+esc(s[2]);
-      $("bDone").hidden=false; $("bClear").hidden=true; pip(2,"done");
-    }else{
-      tries++;
-      slot.className="slot bad shake";
-      setTimeout(()=>slot.classList.remove("shake"),320);
+
+  const tiles=shuffle(T.map((t,i)=>i)).map(i=>{
+    const t=T[i], b=document.createElement("button");
+    b.className="tile"; b.type="button"; b.dataset.idx=i;
+    const j=document.createElement("span"); j.textContent=t[0]; b.appendChild(j);
+    if(t[1]){const g=document.createElement("span"); g.className="g"; g.textContent=t[1]; b.appendChild(g)}
+    b.onclick=()=>place(b,i);
+    tray.appendChild(b);
+    return b;
+  });
+  const tileFor=i=>tiles.find(b=>Number(b.dataset.idx)===i);
+  const markNext=()=>slotEls.forEach((d,i)=>d.classList.toggle("next",i===at&&!done));
+  const says=r=>ROLE_SAY[r]||r;
+
+  function place(btn,i){
+    if(done||btn.classList.contains("used"))return;
+    if(i!==at){
+      slips++;
+      btn.classList.add("bad");
+      setTimeout(()=>btn.classList.remove("bad"),340);
+      const got=T[i], gotP=PARTICLES[got[0]], wantP=PARTICLES[T[at][0]];
       $("bNote").className="note bad";
-      $("bNote").textContent="Not that order. Tap a word to take it back.";
+      /* A particle tapped where a word belongs is the commonest slip, and the
+         useful thing to say is that particles follow what they mark. */
+      $("bNote").textContent = (gotP && !wantP)
+        ? gotP+(got[0]==="か"?"":" It goes after the word it marks, never before.")
+        : "This slot takes "+says(T[at][2])+". "+(gotP||got[0]+" is "+says(got[2])+".");
+      return;
+    }
+    btn.classList.add("used");
+    slotEls[at].classList.add("filled");
+    slotEls[at].querySelector(".box").textContent=T[at][0];
+    at++; markNext();
+    if(at===T.length){
+      done=true;
+      run.r3=slips===0?3:slips<=2?2:1;
+      $("bNote").className="note good";
+      $("bNote").textContent=slips===0?"First try — 3 of 3."
+        :slips<=2?"Two slips or fewer — 2 of 3."
+        :"1 of 3. The pattern is the thing to take away.";
+      $("bDone").hidden=false;
+      pip(2,"done");
+    }else{
+      $("bNote").className="note";
+      $("bNote").textContent="Next: "+says(T[at][2])+".";
     }
   }
-  $("bClear").onclick=()=>{
-    if(done)return;
-    slot.innerHTML=""; slot.className="slot";
-    trayBtns.forEach(b=>b.classList.remove("used"));
-  };
+
+  function undo(i){
+    if(done||i!==at-1)return;
+    at--;
+    slotEls[at].classList.remove("filled");
+    slotEls[at].querySelector(".box").textContent="";
+    tileFor(at).classList.remove("used");
+    markNext();
+    $("bNote").className="note"; $("bNote").textContent="Taken back.";
+  }
+
+  markNext();
   $("bDone").onclick=finish;
 }
 
@@ -308,10 +345,59 @@ function renderDone(r,scored){
     return [it.face,"in "+gap+(gap===1?" day":" days")];
   }));
   const s=SENTENCES[r.sIdx];
-  $("dSent").textContent=s[0].join("");
-  $("dSentEn").textContent=s[1];
-  $("dSentWhy").innerHTML="<b>"+esc(s[2])+"</b>";
+  $("dSent").textContent=s.tiles.map(t=>t[0]).join("");
+  $("dSentEn").textContent=s.en;
+  $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
+  setupReminder();
   $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow.";
+}
+
+
+/* ---- daily reminder ----
+   There is no server behind this page, so there is nothing to send a push from.
+   A repeating calendar alarm is the reliable zero-infrastructure version: it fires
+   whether or not the app has been opened, and it survives storage being cleared. */
+const IN_ARTIFACT = typeof (window.claude||{}).use === "function";
+function icsFor(hhmm){
+  const pad=n=>String(n).padStart(2,"0");
+  const bits=hhmm.split(":"), h=Number(bits[0])||0, m=Number(bits[1])||0;
+  const now=new Date(), d=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  if(d<=now)d.setDate(d.getDate()+1);
+  const local=x=>""+x.getFullYear()+pad(x.getMonth()+1)+pad(x.getDate())+"T"+pad(x.getHours())+pad(x.getMinutes())+"00";
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mainichi//Daily//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    "UID:mainichi-daily-"+pad(h)+pad(m)+"@"+(location.hostname||"local"),
+    "DTSTAMP:"+stamp,
+    "DTSTART:"+local(d),
+    "DURATION:PT5M",
+    "RRULE:FREQ=DAILY",
+    "SUMMARY:毎日 Mainichi — today’s puzzle",
+    "DESCRIPTION:Fifty seconds of Japanese.\\n"+location.href,
+    "URL:"+location.href,
+    "BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:PT0M",
+    "DESCRIPTION:毎日 Mainichi — today’s puzzle",
+    "END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+}
+function setupReminder(){
+  const card=$("remindCard");
+  if(IN_ARTIFACT){card.hidden=true;return}   // artifact viewers cannot be handed a file
+  card.hidden=false;
+  $("remindTime").value=P.remindAt||"08:00";
+  if(P.remindAt)$("remindBtn").textContent="Update reminder";
+  $("remindBtn").onclick=()=>{
+    const t=$("remindTime").value||"08:00";
+    P.remindAt=t; save();
+    const url=URL.createObjectURL(new Blob([icsFor(t)],{type:"text/calendar;charset=utf-8"}));
+    const a=document.createElement("a");
+    a.href=url; a.download="mainichi-daily.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    $("remindBtn").textContent="Update reminder";
+    const n=$("remindNote");
+    n.hidden=false; n.className="note good";
+    n.textContent="mainichi-daily.ics saved — open it to add a repeating "+t+" alarm. On iPhone, tap it in Downloads, then Add All.";
+  };
 }
 
 /* ---- boot ---- */

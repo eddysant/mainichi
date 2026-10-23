@@ -125,19 +125,34 @@ h2{font-size:1.125rem;line-height:1.35}
   letter-spacing:.14em;color:var(--shu);border:1px solid var(--shu-soft);border-radius:2px;padding:.15rem .4rem}
 
 /* sentence build */
-.slot{min-height:3.25rem;display:flex;flex-wrap:wrap;gap:.375rem;align-content:flex-start;
-  padding:.5rem;border:1px dashed var(--rule-s);border-radius:2px}
-.slot:empty::before{content:attr(data-hint);font-size:.8125rem;color:var(--ink-faint);align-self:center}
+.patt{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap;padding:.45rem 0 .45rem .7rem;
+  border-left:2px solid var(--shu)}
+.patt-l{font-size:.5625rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint)}
+.patt-v{font-family:var(--ja);font-size:1.0625rem;letter-spacing:.02em}
+.slots{display:flex;flex-wrap:wrap;gap:.375rem}
+.sl{flex:1 1 auto;min-width:3.75rem;display:flex;flex-direction:column;gap:.25rem}
+.sl .lbl{font-size:.5rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl .box{min-height:2.9rem;display:grid;place-items:center;padding:.2rem;border:1px dashed var(--rule-s);
+  border-radius:2px;font-family:var(--ja);font-size:1.0625rem;text-align:center}
+.sl.next .box{border-style:solid;border-color:var(--shu)}
+.sl.filled .box{border-style:solid;border-color:var(--ok);background:var(--ok-soft);cursor:pointer}
+.sl.filled .lbl{color:var(--ok)}
 .tray{display:flex;flex-wrap:wrap;gap:.375rem;min-height:2.5rem}
-.tile{font-family:var(--ja);font-size:1.0625rem;padding:.45rem .7rem;border:1px solid var(--rule-s);
-  border-radius:2px;background:var(--panel);cursor:pointer;line-height:1.2}
+.tile{display:flex;flex-direction:column;align-items:center;gap:.05rem;line-height:1.2;cursor:pointer;
+  font-family:var(--ja);font-size:1.0625rem;padding:.4rem .6rem;border:1px solid var(--rule-s);
+  border-radius:2px;background:transparent}
+.tile .g{font-family:var(--ui);font-size:.5625rem;letter-spacing:.02em;color:var(--ink-faint)}
 .tile:hover{border-color:var(--shu)}
 .tile.used{visibility:hidden}
-.slot .tile{background:transparent;border-style:solid}
-.slot.bad .tile{border-color:var(--no);color:var(--no)}
-.slot.good{border-style:solid;border-color:var(--ok)}
-.shake{animation:shake .3s}
+.tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* daily reminder */
+.remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.remind-row input[type=time]{font:inherit;font-size:1rem;padding:.6rem .7rem;border:1px solid var(--line);
+  border-radius:2px;background:transparent;color:var(--ink);font-variant-numeric:tabular-nums}
+.remind-row .btn{flex:1;min-width:9rem}
 
 /* buttons */
 .btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:2px;
@@ -236,10 +251,12 @@ h2{font-size:1.125rem;line-height:1.35}
   <!-- round 3: build -->
   <section class="card" id="sc-build" hidden>
     <div><div class="eyebrow">Round three · build the sentence</div><h2 id="bEn">I drink water.</h2></div>
-    <div class="slot" id="bSlot" data-hint="Tap the words below, in order"></div>
+    <div class="patt"><span class="patt-l">Pattern</span><span class="patt-v" id="bPattern"></span></div>
+    <p class="note" id="bWhy"></p>
+    <div class="slots" id="bSlots"></div>
     <div class="tray" id="bTray"></div>
-    <p class="note" id="bNote">Japanese puts the verb last.</p>
-    <div class="btn-row"><button class="btn quiet" id="bClear">Clear</button><button class="btn" id="bDone" hidden>See today’s card</button></div>
+    <p class="note" id="bNote"></p>
+    <button class="btn" id="bDone" hidden>See today’s card</button>
   </section>
 
   <!-- done -->
@@ -253,6 +270,18 @@ h2{font-size:1.125rem;line-height:1.35}
       <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
       <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
+    </div>
+    <div class="hr"></div>
+    <div class="recap" id="remindCard" hidden>
+      <div>
+        <h3>Daily reminder</h3>
+        <p class="note">A repeating calendar alarm is the one thing that reliably interrupts a day. Set it once.</p>
+        <div class="remind-row">
+          <input type="time" id="remindTime" value="08:00" aria-label="Reminder time">
+          <button class="btn quiet" id="remindBtn">Add to calendar</button>
+        </div>
+        <p class="note" id="remindNote" hidden></p>
+      </div>
     </div>
     <div class="hr"></div>
     <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button></div>
@@ -360,33 +389,151 @@ const WORDS = [
   ["冬","ふゆ","fuyu","winter"]
 ];
 
-/* Tiles are tapped into order. Each sentence is grammatical as written. */
+/* What each particle actually does — used verbatim when a tile is placed wrong,
+   so a mistake explains itself instead of just bouncing back. */
+const PARTICLES = {
+  "は":"は marks the topic — what the sentence is about.",
+  "を":"を marks the object — the thing the verb acts on.",
+  "が":"が marks the subject, usually new information.",
+  "に":"に marks a destination, a time, or the person an action is aimed at.",
+  "へ":"へ marks the direction you head in.",
+  "の":"の links two nouns: A の B is “B of A”.",
+  "と":"と means “with”, or “and” between two nouns.",
+  "で":"で marks the means — by train, with a pen.",
+  "か":"か at the end turns a statement into a question.",
+  "です":"です closes a polite statement."
+};
+
+/* How each slot describes itself. Never names the particle it wants — working
+   that out is the exercise. */
+const ROLE_SAY = {
+  "topic":"the topic — what the sentence is about",
+  "subject":"the subject",
+  "object":"the thing the verb acts on",
+  "noun":"a noun",
+  "verb":"the verb",
+  "verb ending":"the ending that completes the verb",
+  "adjective":"a describing word",
+  "place":"a place",
+  "time":"a time word",
+  "person":"a person",
+  "pointer":"a word that points at the noun after it",
+  "question word":"the question word",
+  "topic marker":"the topic marker",
+  "object marker":"the object marker",
+  "subject marker":"the subject marker",
+  "to / at":"a particle meaning “to” or “at”",
+  "toward":"a particle meaning “toward”",
+  "of":"a particle that links two nouns",
+  "with":"a particle meaning “with”",
+  "by":"a particle meaning “by” or “with”",
+  "question":"the question particle",
+  "is / am":"the polite ending"
+};
+
+/* One sentence per day, ordered so the grammar builds: を, が, は/です, then
+   direction, の, と, で, questions, negative, past. Every tile carries its
+   meaning and the job it does, so the only thing being tested is word order. */
 const SENTENCES = [
-  [["わたし","は","がくせい","です"],"I am a student.","は marks the topic — what the sentence is about."],
-  [["これ","は","ほん","です"],"This is a book.","これ is “this thing, near me”."],
-  [["みず","を","のみます"],"I drink water.","を marks the direct object: the thing the verb acts on."],
-  [["がっこう","に","いきます"],"I go to school.","に marks the destination."],
-  [["ねこ","が","います"],"There is a cat.","います is used for living things; あります for objects."],
-  [["にく","を","たべません"],"I don’t eat meat.","-ません is the polite negative ending."],
-  [["あした","とうきょう","へ","いきます"],"I’m going to Tokyo tomorrow.","へ also marks direction, slightly softer than に."],
-  [["この","ほん","は","たかい","です"],"This book is expensive.","この attaches to a noun; これ stands alone."],
-  [["ともだち","と","はなします"],"I talk with a friend.","と means “with” (or “and” between nouns)."],
-  [["なまえ","は","なん","です","か"],"What is your name?","か at the end turns a statement into a question."],
-  [["えき","は","どこ","です","か"],"Where is the station?","Question words sit where the answer would go."],
-  [["まいにち","にほんご","を","べんきょうします"],"I study Japanese every day.","Time words like まいにち come early in the sentence."],
-  [["あめ","が","ふって","います"],"It’s raining.","-て います describes an action in progress."],
-  [["わたし","の","いぬ","は","しろい","です"],"My dog is white.","の links two nouns: A の B is “B of A”."],
-  [["ごはん","を","たべました"],"I ate a meal.","-ました is the polite past ending."],
-  [["せんせい","に","ききます"],"I’ll ask the teacher.","に also marks the person you direct an action at."],
-  [["あの","みせ","は","あたらしい","です"],"That shop is new.","あの is “that over there”, away from both of us."],
-  [["きのう","えいが","を","みました"],"I watched a film yesterday.","The verb always lands at the end."],
-  [["おちゃ","を","かいました"],"I bought tea.","Same frame as のみます — only the verb changes."],
-  [["いま","なんじ","です","か"],"What time is it now?","なんじ literally asks “what hour”."],
-  [["でんしゃ","で","いきます"],"I’ll go by train.","で marks the means: by train, with a pen."],
-  [["にほん","の","たべもの","が","すき","です"],"I like Japanese food.","What you like is marked with が, not を."],
-  [["やま","が","おおきい","です"],"The mountain is big.","が marks the subject when it is new information."],
-  [["ともだち","が","きます"],"A friend is coming.","きます is the polite form of くる."],
-  [["ほん","を","よみます"],"I read a book.","を + verb is the core of most Japanese sentences."]
+  { en:"I drink water.", pattern:"X を VERB",
+    note:"を marks the thing the verb acts on. The verb always lands at the end.",
+    tiles:[["みず","water","object"],["を","","object marker"],["のみます","drink","verb"]] },
+
+  { en:"There is a cat.", pattern:"X が います",
+    note:"が marks the subject. います is for living things; あります is for objects.",
+    tiles:[["ねこ","cat","subject"],["が","","subject marker"],["います","there is","verb"]] },
+
+  { en:"I am a student.", pattern:"A は B です",
+    note:"は marks the topic — what the sentence is about. です closes a polite statement.",
+    tiles:[["わたし","I","topic"],["は","","topic marker"],["がくせい","student","noun"],["です","am","is / am"]] },
+
+  { en:"This is a book.", pattern:"これ は B です",
+    note:"これ means “this thing”, standing on its own. この attaches to a noun instead.",
+    tiles:[["これ","this","topic"],["は","","topic marker"],["ほん","book","noun"],["です","is","is / am"]] },
+
+  { en:"The mountain is big.", pattern:"X が ADJ です",
+    note:"An い-adjective sits straight before です. Nothing links them.",
+    tiles:[["やま","mountain","subject"],["が","","subject marker"],["おおきい","big","adjective"],["です","is","is / am"]] },
+
+  { en:"I read a book.", pattern:"X を VERB",
+    note:"The same frame as みず を のみます. Only the noun and the verb changed.",
+    tiles:[["ほん","book","object"],["を","","object marker"],["よみます","read","verb"]] },
+
+  { en:"That person is a teacher.", pattern:"あの N は B です",
+    note:"あの means “that, over there”. It attaches to the noun it points at.",
+    tiles:[["あの","that","pointer"],["ひと","person","noun"],["は","","topic marker"],["せんせい","teacher","noun"],["です","is","is / am"]] },
+
+  { en:"I’m going to the sea.", pattern:"X へ VERB",
+    note:"へ marks the direction you head in.",
+    tiles:[["うみ","the sea","place"],["へ","","toward"],["いきます","go","verb"]] },
+
+  { en:"I go to school.", pattern:"X に VERB",
+    note:"に marks the destination you arrive at. Here it is interchangeable with へ.",
+    tiles:[["がっこう","school","place"],["に","","to / at"],["いきます","go","verb"]] },
+
+  { en:"It’s raining.", pattern:"X が VERB-て います",
+    note:"-て います describes an action in progress: falling, and still falling.",
+    tiles:[["あめ","rain","subject"],["が","","subject marker"],["ふって","falling","verb"],["います","is","verb ending"]] },
+
+  { en:"It’s my dog.", pattern:"A の B です",
+    note:"の links two nouns: A の B is “B of A”. わたし の いぬ is “dog of me”.",
+    tiles:[["わたし","I / me","noun"],["の","","of"],["いぬ","dog","noun"],["です","it is","is / am"]] },
+
+  { en:"I talk with a friend.", pattern:"X と VERB",
+    note:"と means “with”. Between two nouns it means “and” instead.",
+    tiles:[["ともだち","friend","person"],["と","","with"],["はなします","talk","verb"]] },
+
+  { en:"I’ll go by train.", pattern:"X で VERB",
+    note:"で marks the means — by train, with a pen, in Japanese.",
+    tiles:[["でんしゃ","train","noun"],["で","","by"],["いきます","go","verb"]] },
+
+  { en:"What is your name?", pattern:"X は なん です か",
+    note:"か at the end makes it a question. The question word sits where the answer would go.",
+    tiles:[["なまえ","name","topic"],["は","","topic marker"],["なん","what","question word"],["です","is","is / am"],["か","","question"]] },
+
+  { en:"Where is the station?", pattern:"X は どこ です か",
+    note:"Same shape as the last one. どこ takes the place the answer would occupy.",
+    tiles:[["えき","station","topic"],["は","","topic marker"],["どこ","where","question word"],["です","is","is / am"],["か","","question"]] },
+
+  { en:"I don’t eat meat.", pattern:"X を VERB-ません",
+    note:"-ません is the polite negative: たべます becomes たべません.",
+    tiles:[["にく","meat","object"],["を","","object marker"],["たべません","don’t eat","verb"]] },
+
+  { en:"I ate a meal.", pattern:"X を VERB-ました",
+    note:"-ました is the polite past: たべます becomes たべました.",
+    tiles:[["ごはん","a meal","object"],["を","","object marker"],["たべました","ate","verb"]] },
+
+  { en:"I watched a film yesterday.", pattern:"TIME X を VERB-ました",
+    note:"Time words come first, before the thing being acted on.",
+    tiles:[["きのう","yesterday","time"],["えいが","film","object"],["を","","object marker"],["みました","watched","verb"]] },
+
+  { en:"This book is expensive.", pattern:"この N は ADJ です",
+    note:"この attaches to a noun; これ stands alone. Compare これ は ほん です.",
+    tiles:[["この","this","pointer"],["ほん","book","topic"],["は","","topic marker"],["たかい","expensive","adjective"],["です","is","is / am"]] },
+
+  { en:"That shop is new.", pattern:"あの N は ADJ です",
+    note:"The same frame as この ほん は たかい です, pointing further away.",
+    tiles:[["あの","that","pointer"],["みせ","shop","topic"],["は","","topic marker"],["あたらしい","new","adjective"],["です","is","is / am"]] },
+
+  { en:"I study Japanese every day.", pattern:"TIME X を VERB",
+    note:"まいにち sits at the front, exactly where きのう did.",
+    tiles:[["まいにち","every day","time"],["にほんご","Japanese","object"],["を","","object marker"],["べんきょうします","study","verb"]] },
+
+  { en:"I’ll ask the teacher.", pattern:"PERSON に VERB",
+    note:"に also marks the person an action is aimed at, not only a place.",
+    tiles:[["せんせい","teacher","person"],["に","","to / at"],["ききます","ask","verb"]] },
+
+  { en:"I bought tea.", pattern:"X を VERB-ました",
+    note:"The same past frame as ごはん を たべました.",
+    tiles:[["おちゃ","tea","object"],["を","","object marker"],["かいました","bought","verb"]] },
+
+  { en:"I like tea.", pattern:"X が すき です",
+    note:"What you like takes が, not を — すき is a describing word, not a verb.",
+    tiles:[["おちゃ","tea","subject"],["が","","subject marker"],["すき","liked","adjective"],["です","is","is / am"]] },
+
+  { en:"What time is it now?", pattern:"TIME なんじ です か",
+    note:"なんじ literally asks “what hour”.",
+    tiles:[["いま","now","time"],["なんじ","what time","question word"],["です","is","is / am"],["か","","question"]] }
 ];
 
 const CATEGORIES = [
@@ -446,7 +593,7 @@ const item=id=>id[0]==="k"?kanaItem(+id.slice(1)):wordItem(+id.slice(1));
 function newIdsFor(l){const o=[];if(l<KANA.length)o.push("k"+l);if(l<WORDS.length)o.push("w"+l);return o}
 
 /* ---- progress ---- */
-const blank=()=>({v:1,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
+const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -631,52 +778,89 @@ function nextQ(){
   });
 }
 
-/* ---- round 3: build ---- */
+/* ---- round 3: build ----
+   The old version hid the word meanings AND the word order, so the only strategy
+   left was permuting until it turned green. Now every tile carries its meaning,
+   every slot states the job it wants, and a wrong tap is refused on the spot with
+   the reason — which is where the grammar actually gets taught. */
 function r3(){
   show("sc-build"); pip(2,"live");
-  const s=SENTENCES[run.sIdx], words=s[0], slot=$("bSlot"), tray=$("bTray");
-  let tries=0, done=false;
-  $("bEn").textContent=s[1];
-  $("bNote").className="note"; $("bNote").textContent="Tap the words into order.";
-  slot.innerHTML=""; slot.className="slot"; tray.innerHTML="";
-  $("bDone").hidden=true; $("bClear").hidden=false;
-  let order=shuffle(words);
-  if(words.length>1&&order.join("|")===words.join("|"))order=shuffle(words);
-  const trayBtns=order.map(t=>{
-    const b=document.createElement("button");
-    b.className="tile"; b.textContent=t;
-    b.onclick=()=>{
-      if(done||b.classList.contains("used"))return;
-      b.classList.add("used");
-      const p=document.createElement("button");
-      p.className="tile"; p.textContent=t;
-      p.onclick=()=>{if(done)return;p.remove();b.classList.remove("used");slot.className="slot"};
-      slot.appendChild(p); check();
-    };
-    tray.appendChild(b); return b;
+  const s=SENTENCES[run.sIdx], T=s.tiles, slots=$("bSlots"), tray=$("bTray");
+  let at=0, slips=0, done=false;
+  $("bEn").textContent=s.en;
+  $("bPattern").textContent=s.pattern;
+  $("bWhy").className="note"; $("bWhy").textContent=s.note;
+  $("bNote").className="note"; $("bNote").textContent="Tap each word into the slot that wants it.";
+  $("bDone").hidden=true;
+  slots.innerHTML=""; tray.innerHTML="";
+
+  const slotEls=T.map((t,i)=>{
+    const d=document.createElement("div"); d.className="sl";
+    const l=document.createElement("div"); l.className="lbl"; l.textContent=t[2];
+    const box=document.createElement("div"); box.className="box";
+    box.onclick=()=>undo(i);
+    d.appendChild(l); d.appendChild(box); slots.appendChild(d);
+    return d;
   });
-  function check(){
-    const c=[...slot.children].map(x=>x.textContent);
-    if(c.length<words.length)return;
-    if(c.join("|")===words.join("|")){
-      done=true; slot.className="slot good";
-      run.r3=Math.max(1,3-tries);
-      $("bNote").className="note good";
-      $("bNote").innerHTML="<b>"+esc(words.join(""))+"</b> · "+esc(s[2]);
-      $("bDone").hidden=false; $("bClear").hidden=true; pip(2,"done");
-    }else{
-      tries++;
-      slot.className="slot bad shake";
-      setTimeout(()=>slot.classList.remove("shake"),320);
+
+  const tiles=shuffle(T.map((t,i)=>i)).map(i=>{
+    const t=T[i], b=document.createElement("button");
+    b.className="tile"; b.type="button"; b.dataset.idx=i;
+    const j=document.createElement("span"); j.textContent=t[0]; b.appendChild(j);
+    if(t[1]){const g=document.createElement("span"); g.className="g"; g.textContent=t[1]; b.appendChild(g)}
+    b.onclick=()=>place(b,i);
+    tray.appendChild(b);
+    return b;
+  });
+  const tileFor=i=>tiles.find(b=>Number(b.dataset.idx)===i);
+  const markNext=()=>slotEls.forEach((d,i)=>d.classList.toggle("next",i===at&&!done));
+  const says=r=>ROLE_SAY[r]||r;
+
+  function place(btn,i){
+    if(done||btn.classList.contains("used"))return;
+    if(i!==at){
+      slips++;
+      btn.classList.add("bad");
+      setTimeout(()=>btn.classList.remove("bad"),340);
+      const got=T[i], gotP=PARTICLES[got[0]], wantP=PARTICLES[T[at][0]];
       $("bNote").className="note bad";
-      $("bNote").textContent="Not that order. Tap a word to take it back.";
+      /* A particle tapped where a word belongs is the commonest slip, and the
+         useful thing to say is that particles follow what they mark. */
+      $("bNote").textContent = (gotP && !wantP)
+        ? gotP+(got[0]==="か"?"":" It goes after the word it marks, never before.")
+        : "This slot takes "+says(T[at][2])+". "+(gotP||got[0]+" is "+says(got[2])+".");
+      return;
+    }
+    btn.classList.add("used");
+    slotEls[at].classList.add("filled");
+    slotEls[at].querySelector(".box").textContent=T[at][0];
+    at++; markNext();
+    if(at===T.length){
+      done=true;
+      run.r3=slips===0?3:slips<=2?2:1;
+      $("bNote").className="note good";
+      $("bNote").textContent=slips===0?"First try — 3 of 3."
+        :slips<=2?"Two slips or fewer — 2 of 3."
+        :"1 of 3. The pattern is the thing to take away.";
+      $("bDone").hidden=false;
+      pip(2,"done");
+    }else{
+      $("bNote").className="note";
+      $("bNote").textContent="Next: "+says(T[at][2])+".";
     }
   }
-  $("bClear").onclick=()=>{
-    if(done)return;
-    slot.innerHTML=""; slot.className="slot";
-    trayBtns.forEach(b=>b.classList.remove("used"));
-  };
+
+  function undo(i){
+    if(done||i!==at-1)return;
+    at--;
+    slotEls[at].classList.remove("filled");
+    slotEls[at].querySelector(".box").textContent="";
+    tileFor(at).classList.remove("used");
+    markNext();
+    $("bNote").className="note"; $("bNote").textContent="Taken back.";
+  }
+
+  markNext();
   $("bDone").onclick=finish;
 }
 
@@ -732,10 +916,59 @@ function renderDone(r,scored){
     return [it.face,"in "+gap+(gap===1?" day":" days")];
   }));
   const s=SENTENCES[r.sIdx];
-  $("dSent").textContent=s[0].join("");
-  $("dSentEn").textContent=s[1];
-  $("dSentWhy").innerHTML="<b>"+esc(s[2])+"</b>";
+  $("dSent").textContent=s.tiles.map(t=>t[0]).join("");
+  $("dSentEn").textContent=s.en;
+  $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
+  setupReminder();
   $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow.";
+}
+
+
+/* ---- daily reminder ----
+   There is no server behind this page, so there is nothing to send a push from.
+   A repeating calendar alarm is the reliable zero-infrastructure version: it fires
+   whether or not the app has been opened, and it survives storage being cleared. */
+const IN_ARTIFACT = typeof (window.claude||{}).use === "function";
+function icsFor(hhmm){
+  const pad=n=>String(n).padStart(2,"0");
+  const bits=hhmm.split(":"), h=Number(bits[0])||0, m=Number(bits[1])||0;
+  const now=new Date(), d=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  if(d<=now)d.setDate(d.getDate()+1);
+  const local=x=>""+x.getFullYear()+pad(x.getMonth()+1)+pad(x.getDate())+"T"+pad(x.getHours())+pad(x.getMinutes())+"00";
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mainichi//Daily//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    "UID:mainichi-daily-"+pad(h)+pad(m)+"@"+(location.hostname||"local"),
+    "DTSTAMP:"+stamp,
+    "DTSTART:"+local(d),
+    "DURATION:PT5M",
+    "RRULE:FREQ=DAILY",
+    "SUMMARY:毎日 Mainichi — today’s puzzle",
+    "DESCRIPTION:Fifty seconds of Japanese.\\n"+location.href,
+    "URL:"+location.href,
+    "BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:PT0M",
+    "DESCRIPTION:毎日 Mainichi — today’s puzzle",
+    "END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+}
+function setupReminder(){
+  const card=$("remindCard");
+  if(IN_ARTIFACT){card.hidden=true;return}   // artifact viewers cannot be handed a file
+  card.hidden=false;
+  $("remindTime").value=P.remindAt||"08:00";
+  if(P.remindAt)$("remindBtn").textContent="Update reminder";
+  $("remindBtn").onclick=()=>{
+    const t=$("remindTime").value||"08:00";
+    P.remindAt=t; save();
+    const url=URL.createObjectURL(new Blob([icsFor(t)],{type:"text/calendar;charset=utf-8"}));
+    const a=document.createElement("a");
+    a.href=url; a.download="mainichi-daily.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    $("remindBtn").textContent="Update reminder";
+    const n=$("remindNote");
+    n.hidden=false; n.className="note good";
+    n.textContent="mainichi-daily.ics saved — open it to add a repeating "+t+" alarm. On iPhone, tap it in Downloads, then Add All.";
+  };
 }
 
 /* ---- boot ---- */

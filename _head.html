@@ -125,19 +125,34 @@ h2{font-size:1.125rem;line-height:1.35}
   letter-spacing:.14em;color:var(--shu);border:1px solid var(--shu-soft);border-radius:2px;padding:.15rem .4rem}
 
 /* sentence build */
-.slot{min-height:3.25rem;display:flex;flex-wrap:wrap;gap:.375rem;align-content:flex-start;
-  padding:.5rem;border:1px dashed var(--rule-s);border-radius:2px}
-.slot:empty::before{content:attr(data-hint);font-size:.8125rem;color:var(--ink-faint);align-self:center}
+.patt{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap;padding:.45rem 0 .45rem .7rem;
+  border-left:2px solid var(--shu)}
+.patt-l{font-size:.5625rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint)}
+.patt-v{font-family:var(--ja);font-size:1.0625rem;letter-spacing:.02em}
+.slots{display:flex;flex-wrap:wrap;gap:.375rem}
+.sl{flex:1 1 auto;min-width:3.75rem;display:flex;flex-direction:column;gap:.25rem}
+.sl .lbl{font-size:.5rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl .box{min-height:2.9rem;display:grid;place-items:center;padding:.2rem;border:1px dashed var(--rule-s);
+  border-radius:2px;font-family:var(--ja);font-size:1.0625rem;text-align:center}
+.sl.next .box{border-style:solid;border-color:var(--shu)}
+.sl.filled .box{border-style:solid;border-color:var(--ok);background:var(--ok-soft);cursor:pointer}
+.sl.filled .lbl{color:var(--ok)}
 .tray{display:flex;flex-wrap:wrap;gap:.375rem;min-height:2.5rem}
-.tile{font-family:var(--ja);font-size:1.0625rem;padding:.45rem .7rem;border:1px solid var(--rule-s);
-  border-radius:2px;background:var(--panel);cursor:pointer;line-height:1.2}
+.tile{display:flex;flex-direction:column;align-items:center;gap:.05rem;line-height:1.2;cursor:pointer;
+  font-family:var(--ja);font-size:1.0625rem;padding:.4rem .6rem;border:1px solid var(--rule-s);
+  border-radius:2px;background:transparent}
+.tile .g{font-family:var(--ui);font-size:.5625rem;letter-spacing:.02em;color:var(--ink-faint)}
 .tile:hover{border-color:var(--shu)}
 .tile.used{visibility:hidden}
-.slot .tile{background:transparent;border-style:solid}
-.slot.bad .tile{border-color:var(--no);color:var(--no)}
-.slot.good{border-style:solid;border-color:var(--ok)}
-.shake{animation:shake .3s}
+.tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* daily reminder */
+.remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.remind-row input[type=time]{font:inherit;font-size:1rem;padding:.6rem .7rem;border:1px solid var(--line);
+  border-radius:2px;background:transparent;color:var(--ink);font-variant-numeric:tabular-nums}
+.remind-row .btn{flex:1;min-width:9rem}
 
 /* buttons */
 .btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:2px;
@@ -236,10 +251,12 @@ h2{font-size:1.125rem;line-height:1.35}
   <!-- round 3: build -->
   <section class="card" id="sc-build" hidden>
     <div><div class="eyebrow">Round three · build the sentence</div><h2 id="bEn">I drink water.</h2></div>
-    <div class="slot" id="bSlot" data-hint="Tap the words below, in order"></div>
+    <div class="patt"><span class="patt-l">Pattern</span><span class="patt-v" id="bPattern"></span></div>
+    <p class="note" id="bWhy"></p>
+    <div class="slots" id="bSlots"></div>
     <div class="tray" id="bTray"></div>
-    <p class="note" id="bNote">Japanese puts the verb last.</p>
-    <div class="btn-row"><button class="btn quiet" id="bClear">Clear</button><button class="btn" id="bDone" hidden>See today’s card</button></div>
+    <p class="note" id="bNote"></p>
+    <button class="btn" id="bDone" hidden>See today’s card</button>
   </section>
 
   <!-- done -->
@@ -253,6 +270,18 @@ h2{font-size:1.125rem;line-height:1.35}
       <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
       <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
+    </div>
+    <div class="hr"></div>
+    <div class="recap" id="remindCard" hidden>
+      <div>
+        <h3>Daily reminder</h3>
+        <p class="note">A repeating calendar alarm is the one thing that reliably interrupts a day. Set it once.</p>
+        <div class="remind-row">
+          <input type="time" id="remindTime" value="08:00" aria-label="Reminder time">
+          <button class="btn quiet" id="remindBtn">Add to calendar</button>
+        </div>
+        <p class="note" id="remindNote" hidden></p>
+      </div>
     </div>
     <div class="hr"></div>
     <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button></div>

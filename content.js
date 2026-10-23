@@ -96,33 +96,151 @@ const WORDS = [
   ["冬","ふゆ","fuyu","winter"]
 ];
 
-/* Tiles are tapped into order. Each sentence is grammatical as written. */
+/* What each particle actually does — used verbatim when a tile is placed wrong,
+   so a mistake explains itself instead of just bouncing back. */
+const PARTICLES = {
+  "は":"は marks the topic — what the sentence is about.",
+  "を":"を marks the object — the thing the verb acts on.",
+  "が":"が marks the subject, usually new information.",
+  "に":"に marks a destination, a time, or the person an action is aimed at.",
+  "へ":"へ marks the direction you head in.",
+  "の":"の links two nouns: A の B is “B of A”.",
+  "と":"と means “with”, or “and” between two nouns.",
+  "で":"で marks the means — by train, with a pen.",
+  "か":"か at the end turns a statement into a question.",
+  "です":"です closes a polite statement."
+};
+
+/* How each slot describes itself. Never names the particle it wants — working
+   that out is the exercise. */
+const ROLE_SAY = {
+  "topic":"the topic — what the sentence is about",
+  "subject":"the subject",
+  "object":"the thing the verb acts on",
+  "noun":"a noun",
+  "verb":"the verb",
+  "verb ending":"the ending that completes the verb",
+  "adjective":"a describing word",
+  "place":"a place",
+  "time":"a time word",
+  "person":"a person",
+  "pointer":"a word that points at the noun after it",
+  "question word":"the question word",
+  "topic marker":"the topic marker",
+  "object marker":"the object marker",
+  "subject marker":"the subject marker",
+  "to / at":"a particle meaning “to” or “at”",
+  "toward":"a particle meaning “toward”",
+  "of":"a particle that links two nouns",
+  "with":"a particle meaning “with”",
+  "by":"a particle meaning “by” or “with”",
+  "question":"the question particle",
+  "is / am":"the polite ending"
+};
+
+/* One sentence per day, ordered so the grammar builds: を, が, は/です, then
+   direction, の, と, で, questions, negative, past. Every tile carries its
+   meaning and the job it does, so the only thing being tested is word order. */
 const SENTENCES = [
-  [["わたし","は","がくせい","です"],"I am a student.","は marks the topic — what the sentence is about."],
-  [["これ","は","ほん","です"],"This is a book.","これ is “this thing, near me”."],
-  [["みず","を","のみます"],"I drink water.","を marks the direct object: the thing the verb acts on."],
-  [["がっこう","に","いきます"],"I go to school.","に marks the destination."],
-  [["ねこ","が","います"],"There is a cat.","います is used for living things; あります for objects."],
-  [["にく","を","たべません"],"I don’t eat meat.","-ません is the polite negative ending."],
-  [["あした","とうきょう","へ","いきます"],"I’m going to Tokyo tomorrow.","へ also marks direction, slightly softer than に."],
-  [["この","ほん","は","たかい","です"],"This book is expensive.","この attaches to a noun; これ stands alone."],
-  [["ともだち","と","はなします"],"I talk with a friend.","と means “with” (or “and” between nouns)."],
-  [["なまえ","は","なん","です","か"],"What is your name?","か at the end turns a statement into a question."],
-  [["えき","は","どこ","です","か"],"Where is the station?","Question words sit where the answer would go."],
-  [["まいにち","にほんご","を","べんきょうします"],"I study Japanese every day.","Time words like まいにち come early in the sentence."],
-  [["あめ","が","ふって","います"],"It’s raining.","-て います describes an action in progress."],
-  [["わたし","の","いぬ","は","しろい","です"],"My dog is white.","の links two nouns: A の B is “B of A”."],
-  [["ごはん","を","たべました"],"I ate a meal.","-ました is the polite past ending."],
-  [["せんせい","に","ききます"],"I’ll ask the teacher.","に also marks the person you direct an action at."],
-  [["あの","みせ","は","あたらしい","です"],"That shop is new.","あの is “that over there”, away from both of us."],
-  [["きのう","えいが","を","みました"],"I watched a film yesterday.","The verb always lands at the end."],
-  [["おちゃ","を","かいました"],"I bought tea.","Same frame as のみます — only the verb changes."],
-  [["いま","なんじ","です","か"],"What time is it now?","なんじ literally asks “what hour”."],
-  [["でんしゃ","で","いきます"],"I’ll go by train.","で marks the means: by train, with a pen."],
-  [["にほん","の","たべもの","が","すき","です"],"I like Japanese food.","What you like is marked with が, not を."],
-  [["やま","が","おおきい","です"],"The mountain is big.","が marks the subject when it is new information."],
-  [["ともだち","が","きます"],"A friend is coming.","きます is the polite form of くる."],
-  [["ほん","を","よみます"],"I read a book.","を + verb is the core of most Japanese sentences."]
+  { en:"I drink water.", pattern:"X を VERB",
+    note:"を marks the thing the verb acts on. The verb always lands at the end.",
+    tiles:[["みず","water","object"],["を","","object marker"],["のみます","drink","verb"]] },
+
+  { en:"There is a cat.", pattern:"X が います",
+    note:"が marks the subject. います is for living things; あります is for objects.",
+    tiles:[["ねこ","cat","subject"],["が","","subject marker"],["います","there is","verb"]] },
+
+  { en:"I am a student.", pattern:"A は B です",
+    note:"は marks the topic — what the sentence is about. です closes a polite statement.",
+    tiles:[["わたし","I","topic"],["は","","topic marker"],["がくせい","student","noun"],["です","am","is / am"]] },
+
+  { en:"This is a book.", pattern:"これ は B です",
+    note:"これ means “this thing”, standing on its own. この attaches to a noun instead.",
+    tiles:[["これ","this","topic"],["は","","topic marker"],["ほん","book","noun"],["です","is","is / am"]] },
+
+  { en:"The mountain is big.", pattern:"X が ADJ です",
+    note:"An い-adjective sits straight before です. Nothing links them.",
+    tiles:[["やま","mountain","subject"],["が","","subject marker"],["おおきい","big","adjective"],["です","is","is / am"]] },
+
+  { en:"I read a book.", pattern:"X を VERB",
+    note:"The same frame as みず を のみます. Only the noun and the verb changed.",
+    tiles:[["ほん","book","object"],["を","","object marker"],["よみます","read","verb"]] },
+
+  { en:"That person is a teacher.", pattern:"あの N は B です",
+    note:"あの means “that, over there”. It attaches to the noun it points at.",
+    tiles:[["あの","that","pointer"],["ひと","person","noun"],["は","","topic marker"],["せんせい","teacher","noun"],["です","is","is / am"]] },
+
+  { en:"I’m going to the sea.", pattern:"X へ VERB",
+    note:"へ marks the direction you head in.",
+    tiles:[["うみ","the sea","place"],["へ","","toward"],["いきます","go","verb"]] },
+
+  { en:"I go to school.", pattern:"X に VERB",
+    note:"に marks the destination you arrive at. Here it is interchangeable with へ.",
+    tiles:[["がっこう","school","place"],["に","","to / at"],["いきます","go","verb"]] },
+
+  { en:"It’s raining.", pattern:"X が VERB-て います",
+    note:"-て います describes an action in progress: falling, and still falling.",
+    tiles:[["あめ","rain","subject"],["が","","subject marker"],["ふって","falling","verb"],["います","is","verb ending"]] },
+
+  { en:"It’s my dog.", pattern:"A の B です",
+    note:"の links two nouns: A の B is “B of A”. わたし の いぬ is “dog of me”.",
+    tiles:[["わたし","I / me","noun"],["の","","of"],["いぬ","dog","noun"],["です","it is","is / am"]] },
+
+  { en:"I talk with a friend.", pattern:"X と VERB",
+    note:"と means “with”. Between two nouns it means “and” instead.",
+    tiles:[["ともだち","friend","person"],["と","","with"],["はなします","talk","verb"]] },
+
+  { en:"I’ll go by train.", pattern:"X で VERB",
+    note:"で marks the means — by train, with a pen, in Japanese.",
+    tiles:[["でんしゃ","train","noun"],["で","","by"],["いきます","go","verb"]] },
+
+  { en:"What is your name?", pattern:"X は なん です か",
+    note:"か at the end makes it a question. The question word sits where the answer would go.",
+    tiles:[["なまえ","name","topic"],["は","","topic marker"],["なん","what","question word"],["です","is","is / am"],["か","","question"]] },
+
+  { en:"Where is the station?", pattern:"X は どこ です か",
+    note:"Same shape as the last one. どこ takes the place the answer would occupy.",
+    tiles:[["えき","station","topic"],["は","","topic marker"],["どこ","where","question word"],["です","is","is / am"],["か","","question"]] },
+
+  { en:"I don’t eat meat.", pattern:"X を VERB-ません",
+    note:"-ません is the polite negative: たべます becomes たべません.",
+    tiles:[["にく","meat","object"],["を","","object marker"],["たべません","don’t eat","verb"]] },
+
+  { en:"I ate a meal.", pattern:"X を VERB-ました",
+    note:"-ました is the polite past: たべます becomes たべました.",
+    tiles:[["ごはん","a meal","object"],["を","","object marker"],["たべました","ate","verb"]] },
+
+  { en:"I watched a film yesterday.", pattern:"TIME X を VERB-ました",
+    note:"Time words come first, before the thing being acted on.",
+    tiles:[["きのう","yesterday","time"],["えいが","film","object"],["を","","object marker"],["みました","watched","verb"]] },
+
+  { en:"This book is expensive.", pattern:"この N は ADJ です",
+    note:"この attaches to a noun; これ stands alone. Compare これ は ほん です.",
+    tiles:[["この","this","pointer"],["ほん","book","topic"],["は","","topic marker"],["たかい","expensive","adjective"],["です","is","is / am"]] },
+
+  { en:"That shop is new.", pattern:"あの N は ADJ です",
+    note:"The same frame as この ほん は たかい です, pointing further away.",
+    tiles:[["あの","that","pointer"],["みせ","shop","topic"],["は","","topic marker"],["あたらしい","new","adjective"],["です","is","is / am"]] },
+
+  { en:"I study Japanese every day.", pattern:"TIME X を VERB",
+    note:"まいにち sits at the front, exactly where きのう did.",
+    tiles:[["まいにち","every day","time"],["にほんご","Japanese","object"],["を","","object marker"],["べんきょうします","study","verb"]] },
+
+  { en:"I’ll ask the teacher.", pattern:"PERSON に VERB",
+    note:"に also marks the person an action is aimed at, not only a place.",
+    tiles:[["せんせい","teacher","person"],["に","","to / at"],["ききます","ask","verb"]] },
+
+  { en:"I bought tea.", pattern:"X を VERB-ました",
+    note:"The same past frame as ごはん を たべました.",
+    tiles:[["おちゃ","tea","object"],["を","","object marker"],["かいました","bought","verb"]] },
+
+  { en:"I like tea.", pattern:"X が すき です",
+    note:"What you like takes が, not を — すき is a describing word, not a verb.",
+    tiles:[["おちゃ","tea","subject"],["が","","subject marker"],["すき","liked","adjective"],["です","is","is / am"]] },
+
+  { en:"What time is it now?", pattern:"TIME なんじ です か",
+    note:"なんじ literally asks “what hour”.",
+    tiles:[["いま","now","time"],["なんじ","what time","question word"],["です","is","is / am"],["か","","question"]] }
 ];
 
 const CATEGORIES = [
