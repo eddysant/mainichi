@@ -156,6 +156,43 @@ h2{font-size:1.125rem;line-height:1.35}
 .tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 
+/* round four: writing from memory.
+   The keyboard is the gojuon grid in two taps — consonant row, then vowel — which is
+   how a Japanese phone keyboard works and happens to teach the grid itself. Forty-six
+   keys at once would be 34px wide on a phone, well under a thumb. */
+.wline{display:flex;justify-content:center;flex-wrap:wrap;gap:.3rem;padding:.9rem 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);min-height:4.4rem;align-items:center}
+.wc{width:2.6rem;height:2.6rem;display:grid;place-items:center;position:relative;
+  border:1px solid var(--rule-f);border-radius:1px;font-family:var(--ja);font-size:1.5rem;line-height:1}
+.wc::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(var(--rule-f),var(--rule-f)) center/1px 14% no-repeat,
+             linear-gradient(var(--rule-f),var(--rule-f)) center/14% 1px no-repeat}
+.wc.on{border-color:var(--ok);background:var(--ok-soft)}
+.wc.on::after{opacity:0}
+.wc.bad{animation:shake .3s;border-color:var(--no)}
+.kbd{display:flex;flex-direction:column;gap:.3rem}
+.krow{display:grid;grid-template-columns:repeat(6,1fr);gap:.25rem}
+.krow.kvow{grid-template-columns:repeat(5,1fr);min-height:2.6rem}
+.krow.kmods{grid-template-columns:repeat(4,1fr)}
+.key{padding:.6rem .15rem;border:1px solid var(--line);background:transparent;border-radius:2px;
+  font-family:var(--ja);font-size:1.125rem;line-height:1.1;cursor:pointer;text-align:center}
+.key:hover:not(:disabled){border-color:var(--shu)}
+.key.sel{border-color:var(--shu);color:var(--shu)}
+.key.mod{font-family:var(--ui);font-size:.8125rem;letter-spacing:.04em;color:var(--ink-soft)}
+/* The bare marks are tiny glyphs; at UI size they read as specks. */
+.key.mark{font-family:var(--ja);font-size:1.5rem;line-height:.8;color:var(--ink-soft);padding-top:.45rem}
+.key:disabled{opacity:.3;cursor:default}
+
+/* round five: listening */
+.playbtn{width:4.75rem;height:4.75rem;border-radius:50%;border:1px solid var(--shu);
+  background:var(--shu-soft);color:var(--shu);font-size:1.375rem;cursor:pointer;
+  display:grid;place-items:center;padding-left:.2rem}
+.playbtn:hover{background:var(--shu);color:#fff}
+.playbtn.playing{background:var(--shu);color:#fff;animation:pulse 1s ease infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 .5rem var(--shu-soft)}}
+.plan li.locked{color:var(--ink-faint)}
+.plan li.locked .k{color:var(--ink-faint)}
+
 /* daily reminder */
 .remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
 .remind-row input[type=time]{font:inherit;font-size:1rem;padding:.6rem .7rem;border:1px solid var(--line);
@@ -205,22 +242,14 @@ h2{font-size:1.125rem;line-height:1.35}
     </div>
   </header>
 
-  <div class="pips" id="pips" hidden>
-    <div class="pip" id="pip0"><span></span></div>
-    <div class="pip" id="pip1"><span></span></div>
-    <div class="pip" id="pip2"><span></span></div>
-  </div>
+  <div class="pips" id="pips" hidden></div>
 
   <!-- start -->
   <section class="card" id="sc-start">
     <div class="daymark"><span class="n" id="dayN">1</span><span class="ja" id="dayJa">第一日</span></div>
     <p class="prompt" id="startLine">Three rounds, about fifty seconds. Nothing to catch up on.</p>
     <div class="hr"></div>
-    <ul class="plan">
-      <li><span class="k">一</span><span><b>Find the thread.</b> Five words appear one at a time — say what they share.</span></li>
-      <li><span class="k">二</span><span><b>Recall.</b> Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due.</span></li>
-      <li><span class="k">三</span><span><b>Build a sentence.</b> Tap the words into order.</span></li>
-    </ul>
+    <ul class="plan" id="plan"></ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
   </section>
 
@@ -268,6 +297,36 @@ h2{font-size:1.125rem;line-height:1.35}
     <button class="btn" id="bDone" hidden>See today’s card</button>
   </section>
 
+  <!-- a round appearing for the first time -->
+  <section class="card" id="sc-unlock" hidden>
+    <div class="eyebrow">New round unlocked</div>
+    <h2 id="uTitle"></h2>
+    <p class="prompt" id="uWhy"></p>
+    <ul class="plan" id="uHow"></ul>
+    <button class="btn seal" id="uGo">Try it</button>
+  </section>
+
+  <!-- round four: write it from memory -->
+  <section class="card" id="sc-write" hidden>
+    <div><div class="eyebrow" id="wEyebrow">Round four · write it</div><h2 id="wEn"></h2></div>
+    <div class="wline" id="wCells"></div>
+    <p class="note" id="wNote"></p>
+    <div class="kbd">
+      <div class="krow" id="wRows"></div>
+      <div class="krow kvow" id="wVows"></div>
+      <div class="krow kmods" id="wMods"></div>
+    </div>
+    <button class="btn" id="wNext" hidden>Next</button>
+  </section>
+
+  <!-- round five: hear it -->
+  <section class="card" id="sc-listen" hidden>
+    <div><div class="eyebrow" id="lEyebrow">Round five · hear it</div><h2 id="lQ">Which word did you hear?</h2></div>
+    <div class="face"><button class="playbtn" id="lPlay" aria-label="Play the word">▶</button></div>
+    <div class="opts grid2" id="lOpts"></div>
+    <p class="note" id="lNote"></p>
+  </section>
+
   <!-- done -->
   <section class="card" id="sc-done" hidden>
     <div class="eyebrow" id="dEyebrow">Done for today</div>
@@ -278,6 +337,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div><h3 id="dGroupH">The thread</h3><div class="rows" id="dGroupRows"></div></div>
       <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
+      <div id="dWroteBlock" hidden><h3>Written and heard</h3><div class="rows" id="dWroteRows"></div></div>
       <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
     </div>
     <div class="hr"></div>

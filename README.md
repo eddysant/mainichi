@@ -1,6 +1,6 @@
 # Mainichi 毎日
 
-A daily Japanese micro-puzzle. One run is three rounds and about ninety seconds:
+A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
 
 1. **Find the thread** — five words turn over one at a time; name what they share.
 2. **Recall** — eight questions, two from each of four streams: hiragana, katakana,
@@ -11,6 +11,21 @@ A daily Japanese micro-puzzle. One run is three rounds and about ninety seconds:
    loanword goes meaning then English→katakana.
 3. **Build the sentence** — tap the words into order.
 
+Two more rounds are written but stay shut until the habit is there, because they are
+harder and would be a reason to quit on day three:
+
+4. **Write it from memory** (day 50) — spell a word you know on a two-tap gojūon kana
+   keyboard. No options. A wrong kana is refused where you tap it, and a wrong mark on
+   the right shape says so; after three slips it shows you the next kana and scores zero.
+5. **Hear it** (day 75) — the word is spoken by the device's Japanese voice and you pick
+   it from words chosen for sounding close. No audio to host and it works offline; if
+   the device has no Japanese voice the round is skipped and the card says so, rather
+   than playing silence.
+
+Each unlock gets a card explaining the mechanic the first time it appears, and the start
+screen lists the locked rounds with the day they open — the thing you are building
+towards is visible from day one.
+
 Play it: **https://eddysant.github.io/mainichi/** — add it to your home screen and it
 runs full screen and offline.
 
@@ -19,6 +34,10 @@ runs full screen and offline.
 Lessons advance by *plays*, not by calendar date, so a missed day never skips material —
 it only breaks the streak. Review gaps are 1, 1, 2, 4, 8, 16, 32, 64, 120 plays; a wrong
 answer drops the item back to the first gap.
+
+A word can come up three times in one run once all five rounds are open — recall, writing
+and listening — so an item is graded only once per run, and a later failure overrides an
+earlier pass. Failing to *write* a word you recognised is the truer signal.
 
 Each day introduces the lowest item of each stream not yet seen — one hiragana, one
 katakana, one loanword, one kanji word. Taking the lowest unseen item rather than the one

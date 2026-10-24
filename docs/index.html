@@ -181,6 +181,43 @@ h2{font-size:1.125rem;line-height:1.35}
 .tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 
+/* round four: writing from memory.
+   The keyboard is the gojuon grid in two taps — consonant row, then vowel — which is
+   how a Japanese phone keyboard works and happens to teach the grid itself. Forty-six
+   keys at once would be 34px wide on a phone, well under a thumb. */
+.wline{display:flex;justify-content:center;flex-wrap:wrap;gap:.3rem;padding:.9rem 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);min-height:4.4rem;align-items:center}
+.wc{width:2.6rem;height:2.6rem;display:grid;place-items:center;position:relative;
+  border:1px solid var(--rule-f);border-radius:1px;font-family:var(--ja);font-size:1.5rem;line-height:1}
+.wc::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(var(--rule-f),var(--rule-f)) center/1px 14% no-repeat,
+             linear-gradient(var(--rule-f),var(--rule-f)) center/14% 1px no-repeat}
+.wc.on{border-color:var(--ok);background:var(--ok-soft)}
+.wc.on::after{opacity:0}
+.wc.bad{animation:shake .3s;border-color:var(--no)}
+.kbd{display:flex;flex-direction:column;gap:.3rem}
+.krow{display:grid;grid-template-columns:repeat(6,1fr);gap:.25rem}
+.krow.kvow{grid-template-columns:repeat(5,1fr);min-height:2.6rem}
+.krow.kmods{grid-template-columns:repeat(4,1fr)}
+.key{padding:.6rem .15rem;border:1px solid var(--line);background:transparent;border-radius:2px;
+  font-family:var(--ja);font-size:1.125rem;line-height:1.1;cursor:pointer;text-align:center}
+.key:hover:not(:disabled){border-color:var(--shu)}
+.key.sel{border-color:var(--shu);color:var(--shu)}
+.key.mod{font-family:var(--ui);font-size:.8125rem;letter-spacing:.04em;color:var(--ink-soft)}
+/* The bare marks are tiny glyphs; at UI size they read as specks. */
+.key.mark{font-family:var(--ja);font-size:1.5rem;line-height:.8;color:var(--ink-soft);padding-top:.45rem}
+.key:disabled{opacity:.3;cursor:default}
+
+/* round five: listening */
+.playbtn{width:4.75rem;height:4.75rem;border-radius:50%;border:1px solid var(--shu);
+  background:var(--shu-soft);color:var(--shu);font-size:1.375rem;cursor:pointer;
+  display:grid;place-items:center;padding-left:.2rem}
+.playbtn:hover{background:var(--shu);color:#fff}
+.playbtn.playing{background:var(--shu);color:#fff;animation:pulse 1s ease infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 .5rem var(--shu-soft)}}
+.plan li.locked{color:var(--ink-faint)}
+.plan li.locked .k{color:var(--ink-faint)}
+
 /* daily reminder */
 .remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
 .remind-row input[type=time]{font:inherit;font-size:1rem;padding:.6rem .7rem;border:1px solid var(--line);
@@ -230,22 +267,14 @@ h2{font-size:1.125rem;line-height:1.35}
     </div>
   </header>
 
-  <div class="pips" id="pips" hidden>
-    <div class="pip" id="pip0"><span></span></div>
-    <div class="pip" id="pip1"><span></span></div>
-    <div class="pip" id="pip2"><span></span></div>
-  </div>
+  <div class="pips" id="pips" hidden></div>
 
   <!-- start -->
   <section class="card" id="sc-start">
     <div class="daymark"><span class="n" id="dayN">1</span><span class="ja" id="dayJa">第一日</span></div>
     <p class="prompt" id="startLine">Three rounds, about fifty seconds. Nothing to catch up on.</p>
     <div class="hr"></div>
-    <ul class="plan">
-      <li><span class="k">一</span><span><b>Find the thread.</b> Five words appear one at a time — say what they share.</span></li>
-      <li><span class="k">二</span><span><b>Recall.</b> Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due.</span></li>
-      <li><span class="k">三</span><span><b>Build a sentence.</b> Tap the words into order.</span></li>
-    </ul>
+    <ul class="plan" id="plan"></ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
   </section>
 
@@ -293,6 +322,36 @@ h2{font-size:1.125rem;line-height:1.35}
     <button class="btn" id="bDone" hidden>See today’s card</button>
   </section>
 
+  <!-- a round appearing for the first time -->
+  <section class="card" id="sc-unlock" hidden>
+    <div class="eyebrow">New round unlocked</div>
+    <h2 id="uTitle"></h2>
+    <p class="prompt" id="uWhy"></p>
+    <ul class="plan" id="uHow"></ul>
+    <button class="btn seal" id="uGo">Try it</button>
+  </section>
+
+  <!-- round four: write it from memory -->
+  <section class="card" id="sc-write" hidden>
+    <div><div class="eyebrow" id="wEyebrow">Round four · write it</div><h2 id="wEn"></h2></div>
+    <div class="wline" id="wCells"></div>
+    <p class="note" id="wNote"></p>
+    <div class="kbd">
+      <div class="krow" id="wRows"></div>
+      <div class="krow kvow" id="wVows"></div>
+      <div class="krow kmods" id="wMods"></div>
+    </div>
+    <button class="btn" id="wNext" hidden>Next</button>
+  </section>
+
+  <!-- round five: hear it -->
+  <section class="card" id="sc-listen" hidden>
+    <div><div class="eyebrow" id="lEyebrow">Round five · hear it</div><h2 id="lQ">Which word did you hear?</h2></div>
+    <div class="face"><button class="playbtn" id="lPlay" aria-label="Play the word">▶</button></div>
+    <div class="opts grid2" id="lOpts"></div>
+    <p class="note" id="lNote"></p>
+  </section>
+
   <!-- done -->
   <section class="card" id="sc-done" hidden>
     <div class="eyebrow" id="dEyebrow">Done for today</div>
@@ -303,6 +362,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div><h3 id="dGroupH">The thread</h3><div class="rows" id="dGroupRows"></div></div>
       <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
+      <div id="dWroteBlock" hidden><h3>Written and heard</h3><div class="rows" id="dWroteRows"></div></div>
       <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
     </div>
     <div class="hr"></div>
@@ -685,7 +745,8 @@ const GROUPS = [
 <script>
 (function(){
 const $=id=>document.getElementById(id);
-const SCREENS=["sc-start","sc-group","sc-teach","sc-recall","sc-build","sc-done"];
+const SCREENS=["sc-start","sc-group","sc-teach","sc-recall","sc-build",
+  "sc-unlock","sc-write","sc-listen","sc-done"];
 const show=id=>SCREENS.forEach(s=>{$(s).hidden=(s!==id)});
 const DAY=864e5;
 const dstr=d=>d.toLocaleDateString("en-CA");
@@ -732,8 +793,37 @@ function newToday(){
   }).filter(Boolean);
 }
 
+/* ---- the run's rounds ----
+   Rounds four and five exist from the start but stay shut until the habit is there.
+   Both fill a real gap: everything in rounds one to three is four-option recognition,
+   so a day can be passed without ever retrieving anything cold or hearing a word said.
+   `day` is the day number they appear on, counting from one. */
+const ROUNDS=[
+  {key:"group", day:1,  ja:"一", name:"Find the thread",
+   blurb:"Five words appear one at a time — say what they share."},
+  {key:"recall",day:1,  ja:"二", name:"Recall",
+   blurb:"Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due."},
+  {key:"build", day:1,  ja:"三", name:"Build a sentence",
+   blurb:"Tap the words into order."},
+  {key:"write", day:50, ja:"四", name:"Write it from memory",
+   blurb:"Spell a word you know on a kana keyboard — no options to choose from.",
+   why:"Fifty days of picking the right answer out of four is recognition. This asks you to produce the word with nothing to recognise.",
+   how:["Tap a consonant row, then a vowel — the gojuon grid, two taps per kana.",
+        "゙ and ゚ add the marks; 小 shrinks the last kana to っ or ゃ.",
+        "A wrong kana is refused where you tap it, so you never fill in a whole wrong word."]},
+  {key:"listen",day:75, ja:"五", name:"Hear it",
+   blurb:"Pick the word you heard, from words that sound alike.",
+   why:"Everything so far has been silent. The hardest part of Japanese on the day you need it is catching a word said at speed.",
+   how:["Tap to hear it, as many times as you like.",
+        "The wrong answers are chosen for sounding close to the right one.",
+        "Needs a Japanese voice on the device; the round is skipped if there is none."]}
+];
+const roundsFor=day=>ROUNDS.filter(r=>day>=r.day);
+const roundBy=k=>ROUNDS.filter(r=>r.key===k)[0];
+
 /* ---- progress ---- */
-const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},lastRun:null});
+const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
+  lastRun:null,metRounds:[]});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -754,8 +844,24 @@ async function save(){saveLocal();if(docRef){try{await docRef.set(JSON.parse(JSO
 /* ---- spaced repetition: gaps in days, counted in plays ---- */
 const IV=[1,1,2,4,8,16,32,64,120];
 function dueIdsAt(n){return Object.keys(P.srs).filter(k=>P.srs[k].due<=n).sort((a,b)=>P.srs[a].due-P.srs[b].due)}
+/* A word can now come up three times in one run — recall, writing, listening — and
+   grading it each time would move its review date three boxes in a day and bump `seen`
+   three times, flipping the question direction. One grade per item per run, and a later
+   failure overrides an earlier pass: failing to write a word you recognised is the
+   truer signal. */
 function grade(id,ok){
   const s=P.srs[id]||(P.srs[id]={box:0,due:0,seen:0});
+  if(run){
+    run.graded=run.graded||{};
+    const prev=run.graded[id];
+    if(prev){
+      if(ok||prev==="bad")return;
+      run.graded[id]="bad";
+      s.box=0; s.due=P.plays+IV[0];
+      return;
+    }
+    run.graded[id]=ok?"ok":"bad";
+  }
   s.box=ok?Math.min(IV.length-1,s.box+1):0;
   s.seen=(s.seen||0)+1;
   s.due=P.plays+IV[s.box];
@@ -798,7 +904,14 @@ function mkQ(id){
 }
 
 /* ---- chrome ---- */
-function pip(i,state){const el=$("pip"+i);el.className="pip"+(state?" "+state:"")}
+function buildPips(n){
+  const box=$("pips"); box.innerHTML="";
+  for(let i=0;i<n;i++){
+    const d=document.createElement("div"); d.className="pip"; d.id="pip"+i;
+    d.appendChild(document.createElement("span")); box.appendChild(d);
+  }
+}
+function pip(i,state){const el=$("pip"+i);if(el)el.className="pip"+(state?" "+state:"")}
 function paintStreak(){
   $("streakN").textContent=P.streak||0;
   const h=new Set(P.history||[]), box=$("stamps");
@@ -817,16 +930,55 @@ function renderStart(){
   const nw=newToday(), newN=nw.length;
   const qn=quizIdsFor(nw,(P.plays||0)+1).length;
   let line;
-  if(P.plays===0) line="Three rounds, a minute and a half. A hiragana, a katakana, a loanword and a kanji word to start.";
-  else if(newN) line="Three rounds, a minute and a half. "+newN+" new, "+qn+" to recall.";
-  else line="Three rounds, a minute and a half. "+qn+" to recall — no new characters left.";
+  const nr=roundsFor(n).length;
+  const head=["","One round","Two rounds","Three rounds","Four rounds","Five rounds"][nr]
+    +", "+["","half a minute","a minute","a minute and a half","two minutes","two and a half minutes"][nr]+". ";
+  if(P.plays===0) line=head+"A hiragana, a katakana, a loanword and a kanji word to start.";
+  else if(newN) line=head+newN+" new, "+qn+" to recall.";
+  else line=head+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
+  const ul=$("plan"); ul.innerHTML="";
+  ROUNDS.forEach(r=>{
+    const open=n>=r.day, li=document.createElement("li");
+    li.className=open?"":"locked";
+    li.innerHTML='<span class="k">'+r.ja+'</span><span><b>'+esc(r.name)+'.</b> '
+      +(open?esc(r.blurb):"Unlocks on day "+r.day+".")+'</span>';
+    ul.appendChild(li);
+  });
   $("go").textContent=P.plays===0?"Start day one":"Start today’s puzzle";
+}
+
+/* ---- stepping through the run ----
+   Each round ends by calling nextStep(); a round appearing for the first time gets an
+   explainer card before it rather than dropping the player into a mechanic they have
+   never seen. */
+const STEP={group:()=>r1(),recall:()=>teach(),build:()=>r3(),write:()=>r4(),listen:()=>r5()};
+function nextStep(){
+  run.step++;
+  const key=run.plan[run.step];
+  if(!key)return finish();
+  if((P.metRounds||[]).indexOf(key)<0)return unlockCard(key);
+  STEP[key]();
+}
+function unlockCard(key){
+  const r=roundBy(key);
+  P.metRounds=(P.metRounds||[]).concat([key]);
+  save();
+  show("sc-unlock");
+  $("uTitle").textContent=r.name;
+  $("uWhy").textContent=r.why||r.blurb;
+  const ul=$("uHow"); ul.innerHTML="";
+  (r.how||[]).forEach((h,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML='<span class="k">・</span><span>'+esc(h)+'</span>';
+    ul.appendChild(li);
+  });
+  $("uGo").onclick=()=>STEP[key]();
 }
 
 /* ---- round 1: grouping ---- */
 function r1(){
-  show("sc-group"); pip(0,"live"); pip(1,""); pip(2,"");
+  show("sc-group"); pip(0,"live");
   const g=run.g, cells=$("gCells"), rom=$("gRomaji"), box=$("gOpts");
   let revealed=1, wrong=0, solved=false;
   cells.innerHTML=""; rom.innerHTML="";
@@ -873,7 +1025,7 @@ function r1(){
     };
     box.appendChild(b);
   });
-  $("gNext").onclick=teach;
+  $("gNext").onclick=nextStep;
 }
 
 /* ---- teach new items ---- */
@@ -884,7 +1036,7 @@ function teach(){
   (function one(){
     if(i>=ids.length)return quiz();
     const it=item(ids[i]);
-    show("sc-teach"); pip(1,"live");
+    show("sc-teach"); pip(run.step,"live");
     $("tBadge").textContent="New today · "+it.script
       +(ids.length>1?" ("+(i+1)+" of "+ids.length+")":"");
     $("tBig").textContent=it.face;
@@ -916,13 +1068,13 @@ function quiz(){
   run.dueIds=ids.filter(id=>run.newIds.indexOf(id)<0);
   run.qs=shuffle(ids).map(mkQ);
   run.r2max=run.qs.length; run.qi=0;
-  if(!run.qs.length){pip(1,"done");return r3()}
+  if(!run.qs.length){pip(run.step,"done");return nextStep()}
   nextQ();
 }
 function nextQ(){
-  if(run.qi>=run.qs.length){pip(1,"done");return r3()}
+  if(run.qi>=run.qs.length){pip(run.step,"done");return nextStep()}
   const q=run.qs[run.qi], box=$("rOpts");
-  show("sc-recall"); pip(1,"live");
+  show("sc-recall"); pip(run.step,"live");
   $("rEyebrow").textContent="Round two · recall "+(run.qi+1)+" of "+run.qs.length;
   $("rQ").textContent=q.q;
   $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"")+(q.gloss?" gloss":"");
@@ -959,7 +1111,7 @@ function nextQ(){
    every slot states the job it wants, and a wrong tap is refused on the spot with
    the reason — which is where the grammar actually gets taught. */
 function r3(){
-  show("sc-build"); pip(2,"live");
+  show("sc-build"); pip(run.step,"live");
   const s=SENTENCES[run.sIdx], T=s.tiles, slots=$("bSlots"), tray=$("bTray");
   let at=0, slips=0, done=false;
   $("bEn").textContent=s.en;
@@ -1018,7 +1170,7 @@ function r3(){
         :slips<=2?"Two slips or fewer — 2 of 3."
         :"1 of 3. The pattern is the thing to take away.";
       $("bDone").hidden=false;
-      pip(2,"done");
+      pip(run.step,"done");
     }else{
       $("bNote").className="note";
       $("bNote").textContent="Next: "+says(T[at][2])+".";
@@ -1036,13 +1188,276 @@ function r3(){
   }
 
   markNext();
-  $("bDone").onclick=finish;
+  $("bDone").onclick=nextStep;
+}
+
+/* ---- round 4: write it from memory ----
+   The first round that asks for production. No options: you spell the reading out on a
+   kana keyboard, and a wrong kana is refused at the tap, so you never fill in a whole
+   wrong word and then get told. */
+const KROWS=[
+  ["あ","あいうえお"],["か","かきくけこ"],["さ","さしすせそ"],["た","たちつてと"],["な","なにぬねの"],
+  ["は","はひふへほ"],["ま","まみむめも"],["や","やゆよ"],["ら","らりるれろ"],["わ","わを"],["ん","ん"]
+];
+const DAKU={"か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご","さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
+  "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど","は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ"};
+const HANDAKU={"は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ"};
+const SMALL={"あ":"ぁ","い":"ぃ","う":"ぅ","え":"ぇ","お":"ぉ","つ":"っ","や":"ゃ","ゆ":"ゅ","よ":"ょ","わ":"ゎ"};
+const WRITE_N=2;
+
+function writeIds(){
+  const known=Object.keys(P.srs).filter(id=>id[0]==="w");
+  const due=dueIdsAt(P.plays).filter(id=>id[0]==="w");
+  const out=[];
+  const add=id=>{if(out.indexOf(id)<0&&out.length<WRITE_N)out.push(id)};
+  due.forEach(add);
+  shuffle(known).forEach(add);
+  return out;
+}
+
+function r4(){
+  run.wIds=writeIds();
+  run.wi=0;
+  run.r4max=run.wIds.length*2;
+  if(!run.wIds.length){pip(run.step,"done");return nextStep()}
+  nextWrite();
+}
+
+function nextWrite(){
+  if(run.wi>=run.wIds.length){pip(run.step,"done");return nextStep()}
+  const it=item(run.wIds[run.wi]), want=it.kana;
+  show("sc-write"); pip(run.step,"live");
+  $("wEyebrow").textContent="Round four · write it "+(run.wi+1)+" of "+run.wIds.length;
+  $("wEn").textContent=it.en;
+  $("wNext").hidden=true;
+  let typed="", slips=0, shown=false, done=false, row=null;
+
+  const cells=$("wCells");
+  function paint(){
+    cells.innerHTML="";
+    for(let i=0;i<want.length;i++){
+      const d=document.createElement("div");
+      d.className="wc"+(i<typed.length?" on":"");
+      d.textContent=typed[i]||"";
+      cells.appendChild(d);
+    }
+  }
+  function refuse(ch){
+    slips++;
+    const d=cells.children[typed.length];
+    if(d){d.classList.add("bad");setTimeout(()=>d.classList.remove("bad"),340)}
+    $("wNote").className="note bad";
+    /* Say what is wrong about THIS kana rather than just "no": a learner who typed か
+       for が has the right shape and the wrong voicing, and should be told that. */
+    const want1=want[typed.length];
+    const base=c=>{for(const k in DAKU)if(DAKU[k]===c)return k;for(const k in HANDAKU)if(HANDAKU[k]===c)return k;
+      for(const k in SMALL)if(SMALL[k]===c)return k;return c};
+    if(base(ch)===base(want1)) $("wNote").textContent="Right shape, wrong mark — "+want1+", not "+ch+".";
+    else if(slips>=3){ $("wNote").textContent="Next is "+want1+"."; }
+    else $("wNote").textContent="Not "+ch+" there.";
+    if(slips>=3)hint();
+  }
+  function hint(){
+    const d=cells.children[typed.length];
+    if(d){d.textContent=want[typed.length];d.style.color="var(--ink-faint)"}
+    shown=true;
+  }
+  function put(ch){
+    if(done)return;
+    if(ch!==want[typed.length])return refuse(ch);
+    typed+=ch; paint();
+    if(typed.length<want.length){
+      $("wNote").className="note";
+      $("wNote").textContent=typed.length+" of "+want.length+".";
+      return;
+    }
+    done=true;
+    const pts=shown?0:slips===0?2:1;
+    run.r4=(run.r4||0)+pts;
+    if(run.scored)grade(run.wIds[run.wi],slips===0&&!shown);
+    $("wNote").className="note "+(pts===2?"good":"bad");
+    $("wNote").textContent=it.face+" = "+want+" ("+it.romaji+") — "+it.en
+      +" · "+(pts===2?"clean, 2 of 2":pts===1?"1 of 2":"0 of 2, but you have seen it written now");
+    $("wNext").hidden=false;
+    $("wNext").textContent=run.wi<run.wIds.length-1?"Next word"
+      :run.plan[run.step+1]?"Last round":"See today’s card";
+  }
+  function del(){
+    if(done||!typed.length)return;
+    typed=typed.slice(0,-1); paint();
+    $("wNote").className="note"; $("wNote").textContent="";
+  }
+
+  /* the keyboard: consonant row, then vowel, then the marks */
+  const vows=$("wVows"), mods=$("wMods");
+  function drawVows(){
+    vows.innerHTML="";
+    if(row===null)return;
+    for(const c of KROWS[row][1]){
+      const b=document.createElement("button");
+      b.className="key"; b.type="button"; b.textContent=c;
+      b.onclick=()=>put(c);
+      vows.appendChild(b);
+    }
+  }
+  const rows=$("wRows"); rows.innerHTML="";
+  KROWS.forEach((r,i)=>{
+    const b=document.createElement("button");
+    b.className="key"; b.type="button"; b.textContent=r[0];
+    b.onclick=()=>{
+      row=i;
+      [...rows.children].forEach((x,j)=>x.classList.toggle("sel",j===i));
+      if(r[1].length===1)put(r[0]); else drawVows();
+    };
+    rows.appendChild(b);
+  });
+  mods.innerHTML="";
+  [["゛","daku"],["゜","handaku"],["小","small"],["⌫","del"]].forEach(([label,kind])=>{
+    const b=document.createElement("button");
+    b.className="key "+(kind==="daku"||kind==="handaku"?"mark":"mod");
+    b.type="button"; b.textContent=label;
+    b.setAttribute("aria-label",kind==="daku"?"dakuten":kind==="handaku"?"handakuten"
+      :kind==="small"?"small kana":"delete");
+    b.onclick=()=>{
+      if(kind==="del")return del();
+      if(done||!typed.length)return;
+      const last=typed[typed.length-1];
+      const map=kind==="daku"?DAKU:kind==="handaku"?HANDAKU:SMALL;
+      const to=map[last];
+      if(!to){
+        $("wNote").className="note bad";
+        $("wNote").textContent=last+" does not take that mark.";
+        return;
+      }
+      /* Check before replacing. Running this through put() would strip the kana first
+         and leave the word short when the mark turns out to be wrong. */
+      const at=typed.length-1;
+      if(to!==want[at]){
+        const d=cells.children[at];
+        if(d){d.classList.add("bad");setTimeout(()=>d.classList.remove("bad"),340)}
+        slips++;
+        $("wNote").className="note bad";
+        $("wNote").textContent=want[at]+" takes no mark there.";
+        return;
+      }
+      typed=typed.slice(0,at)+to; paint();
+      $("wNote").className="note";
+      $("wNote").textContent=typed.length+" of "+want.length+".";
+      if(typed.length===want.length){
+        /* the mark completed the word */
+        typed=typed.slice(0,-1);
+        put(to);
+      }
+    };
+    mods.appendChild(b);
+  });
+  row=null; drawVows(); paint();
+  $("wNote").className="note";
+  $("wNote").textContent="Spell the reading. "+want.length+" kana.";
+  $("wNext").onclick=()=>{run.wi++;nextWrite()};
+}
+
+/* ---- round 5: hear it ----
+   Browser speech synthesis, so there is no audio to host and it works offline. No
+   Japanese voice on the device means no round: skipping is better than a silent one. */
+const LISTEN_N=3;
+function jaVoice(){
+  if(!("speechSynthesis" in window))return null;
+  const v=speechSynthesis.getVoices().filter(x=>/^ja/i.test(x.lang||""));
+  if(!v.length)return null;
+  /* Apple ships nine Japanese voices and seven of them are the novelty set (Grandma,
+     Rocko, Flo …), which is not what you want to learn pronunciation from. They all
+     carry a parenthesised language in the name; the system voices — Kyoko, Otoya,
+     O-Ren — do not, so prefer a name without one. */
+  const plain=v.filter(x=>x.name.indexOf("(")<0);
+  const dflt=v.filter(x=>x.default);
+  return plain[0]||dflt[0]||v[0];
+}
+function speak(text){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const v=jaVoice(); if(v)u.voice=v;
+    u.lang="ja-JP"; u.rate=.85;
+    speechSynthesis.speak(u);
+    return u;
+  }catch(e){return null}
+}
+/* Distractors that sound close: same length, same first or last mora, shared kana.
+   A listening round whose wrong answers sound nothing alike is a vocabulary round. */
+function soundalikes(kana,n){
+  const score=w=>{
+    const b=w[1]; let sc=0;
+    if(b.length===kana.length)sc+=3;
+    else if(Math.abs(b.length-kana.length)===1)sc+=1;
+    if(b[0]===kana[0])sc+=2;
+    if(b[b.length-1]===kana[kana.length-1])sc+=2;
+    for(const c of new Set(kana))if(b.indexOf(c)>=0)sc+=1;
+    return sc;
+  };
+  const near=WORDS.filter(w=>w[1]!==kana).sort((a,b)=>score(b)-score(a)).slice(0,n*2);
+  return pick(near,n);
+}
+function listenIds(){
+  const known=Object.keys(P.srs).filter(id=>id[0]==="w");
+  return pick(known,Math.min(LISTEN_N,known.length));
+}
+function r5(){
+  if(!jaVoice()){
+    run.noVoice=true; run.r5max=0;
+    pip(run.step,"done");
+    return nextStep();
+  }
+  run.lIds=listenIds(); run.li=0; run.r5max=run.lIds.length;
+  if(!run.lIds.length){pip(run.step,"done");return nextStep()}
+  nextListen();
+}
+function nextListen(){
+  if(run.li>=run.lIds.length){pip(run.step,"done");return nextStep()}
+  const it=item(run.lIds[run.li]);
+  show("sc-listen"); pip(run.step,"live");
+  $("lEyebrow").textContent="Round five · hear it "+(run.li+1)+" of "+run.lIds.length;
+  $("lNote").className="note"; $("lNote").textContent="Tap to hear it. Again as often as you like.";
+  const play=$("lPlay");
+  play.onclick=()=>{
+    play.classList.add("playing");
+    const u=speak(it.kana);
+    if(u)u.onend=()=>play.classList.remove("playing");
+    else setTimeout(()=>play.classList.remove("playing"),900);
+  };
+  const box=$("lOpts"); box.innerHTML="";
+  let answered=false;
+  shuffle([it].concat(soundalikes(it.kana,3).map(w=>({face:w[0],kana:w[1],romaji:w[2],en:w[3]}))))
+    .forEach(o=>{
+      const b=document.createElement("button");
+      b.className="opt ja"; b.type="button"; b.textContent=o.kana;
+      b.onclick=()=>{
+        if(answered)return; answered=true;
+        const ok=o.kana===it.kana;
+        [...box.children].forEach(x=>{
+          x.disabled=true;
+          if(x.textContent===it.kana)x.classList.add("right");
+          else if(x===b)x.classList.add("wrong");
+          else x.classList.add("dim");
+        });
+        if(ok)run.r5=(run.r5||0)+1;
+        if(run.scored)grade(run.lIds[run.li],ok);
+        $("lNote").className="note "+(ok?"good":"bad");
+        $("lNote").textContent=it.face+" = "+it.kana+" ("+it.romaji+") — "+it.en;
+        setTimeout(()=>{run.li++;nextListen()},ok?900:2100);
+      };
+      box.appendChild(b);
+    });
+  play.click();
 }
 
 /* ---- finish ---- */
 async function finish(){
-  const r={date:today(),lesson:run.lesson,score:run.r1+run.r2+run.r3,max:5+run.r2max+3,
-           gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds};
+  const r={date:today(),lesson:run.lesson,
+           score:run.r1+run.r2+run.r3+(run.r4||0)+(run.r5||0),
+           max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0),
+           gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds,
+           wIds:run.wIds||[],lIds:run.lIds||[],noVoice:!!run.noVoice};
   const scored=run.scored;
   if(scored){
     if(P.last===yesterday())P.streak=(P.streak||0)+1;
@@ -1068,7 +1483,7 @@ function rowsInto(el,pairs){
   });
 }
 function renderDone(r,scored){
-  show("sc-done"); pip(0,"done"); pip(1,"done"); pip(2,"done");
+  show("sc-done"); [...$("pips").children].forEach((_,i)=>pip(i,"done"));
   const pct=r.score/r.max;
   $("dEyebrow").textContent=scored?"Done for today":"Practice run · not scored";
   $("dScore").textContent=r.score;
@@ -1090,6 +1505,16 @@ function renderDone(r,scored){
     const gap=s?Math.max(1,s.due-P.plays):1;
     return [it.face,"in "+gap+(gap===1?" day":" days")];
   }));
+  const wrote=(r.wIds||[]).concat(r.lIds||[]);
+  $("dWroteBlock").hidden=!wrote.length&&!r.noVoice;
+  if(r.noVoice){
+    rowsInto($("dWroteRows"),[["—","No Japanese voice on this device, so round five was skipped."]]);
+  }else{
+    rowsInto($("dWroteRows"),wrote.map(id=>{
+      const it=item(id);
+      return [it.face,esc(it.kana)+" <i>"+esc(it.romaji)+"</i>"];
+    }));
+  }
   const s=SENTENCES[r.sIdx];
   $("dSent").textContent=s.tiles.map(t=>t[0]).join("");
   $("dSentEn").textContent=s.en;
@@ -1165,20 +1590,28 @@ function setupReminder(){
 function startRun(scored){
   if(scored)P.plays=(P.plays||0)+1;
   const l=P.lesson, nw=newToday();
+  const plan=roundsFor(l+1).map(r=>r.key);
   run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
-       newIds:nw,dueIds:[],
-       r1:0,r2:0,r2max:0,r3:0,qs:[],qi:0};
+       newIds:nw,dueIds:[],plan,step:-1,
+       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,qs:[],qi:0};
+  buildPips(plan.length);
   $("pips").hidden=false;
-  r1();
+  nextStep();
 }
 function refresh(){
   if(run)return;
   paintStreak();
-  if(P.lastRun&&P.lastRun.date===today()){$("pips").hidden=false;renderDone(P.lastRun,true)}
+  if(P.lastRun&&P.lastRun.date===today()){
+    buildPips(roundsFor((P.lastRun.lesson||0)+1).length);
+    $("pips").hidden=false; renderDone(P.lastRun,true);
+  }
   else{$("pips").hidden=true;renderStart();show("sc-start")}
 }
 $("go").onclick=()=>startRun(true);
 $("again").onclick=()=>startRun(false);
+
+try{if("speechSynthesis" in window){speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 
 const local=loadLocal(); if(local)P=local;
 refresh();
