@@ -29,38 +29,45 @@ img{max-width:100%}
 <style>
 /* Layout: one phone-width column on manuscript paper. Rounds advance in place inside a
    single card; the streak reads as a row of stamps above it.
-   Colour: late-90s Japanese stationery — magenta and cyan on warm paper, hard offset
-   shadows with no blur, nothing soft or gradient anywhere. */
+   Colour: late-90s Japanese stationery — grass green and teal on a pale lime paper,
+   acid lime for the highlighter, hard offset shadows with no blur, nothing soft or
+   gradient anywhere. */
 :root{
-  --paper:#fdf8ec;      /* warm stationery cream */
+  --paper:#f3f5e4;      /* pale lime stationery */
   --panel:#ffffff;
-  --ink:#171438;        /* deep indigo, not black */
-  --ink-soft:#56508a;
-  --ink-faint:#9a93c4;
-  --rule-s:#00b8d4;     /* the genko yoshi rule, in pen cyan */
-  --rule-f:#aeeaf4;
-  --line:#e7e1f2;
-  --pop:#ff2e88;        /* hot magenta: the accent that was vermilion */
-  --pop-soft:#ffd9ea;
-  --zing:#ffcf2d;       /* highlighter yellow, used sparingly */
-  --ok:#00a06b;
-  --ok-soft:#c4f2e0;
-  --no:#ff4d2e;
+  --ink:#15261a;        /* deep pine, not black */
+  --ink-soft:#456b4f;
+  --ink-faint:#93a894;
+  --rule-s:#12a19a;     /* the genko yoshi rule, in teal pen */
+  --rule-f:#bde3df;
+  --line:#dde6cf;
+  --pop:#1f9440;        /* grass green: the accent that was vermilion, then magenta */
+  --pop-soft:#d6f0cf;
+  --zing:#d9f24d;       /* acid lime highlighter, used sparingly */
+  /* a blue-leaning green, so "right" never reads as just more accent */
+  --ok:#0b8a5f;
+  --ok-soft:#c7f0dd;
+  --no:#e23b1e;
   --no-soft:#ffdcd3;
+  --on-pop:#ffffff;     /* text on a filled accent */
   --ja:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --ui:"Zen Kaku Gothic New","Hiragino Sans","Helvetica Neue",Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#141029;--panel:#201a45;--ink:#f4f0ff;--ink-soft:#aba3d8;--ink-faint:#776fa8;
-  --rule-s:#25c9e0;--rule-f:#2c4a6b;--line:#322a5c;
-  --pop:#ff4da6;--pop-soft:#4f1636;--zing:#ffd84d;
-  --ok:#2fd79a;--ok-soft:#10402f;--no:#ff7355;--no-soft:#4a1d14;
+  --paper:#0c1710;--panel:#13251a;--ink:#e9f5e7;--ink-soft:#9fc3a8;--ink-faint:#6c8a74;
+  --rule-s:#2bd0bd;--rule-f:#2a4a42;--line:#27402e;
+  --pop:#4ade6a;--pop-soft:#163a1f;--zing:#d7f24d;
+  --ok:#2fd79a;--ok-soft:#0f3b2b;--no:#ff7355;--no-soft:#4a1d14;
+  /* the accent is light here, so what sits on it has to be dark */
+  --on-pop:#0c1710;
   color-scheme:dark}}
 :root[data-theme="dark"]{
-  --paper:#141029;--panel:#201a45;--ink:#f4f0ff;--ink-soft:#aba3d8;--ink-faint:#776fa8;
-  --rule-s:#25c9e0;--rule-f:#2c4a6b;--line:#322a5c;
-  --pop:#ff4da6;--pop-soft:#4f1636;--zing:#ffd84d;
-  --ok:#2fd79a;--ok-soft:#10402f;--no:#ff7355;--no-soft:#4a1d14;
+  --paper:#0c1710;--panel:#13251a;--ink:#e9f5e7;--ink-soft:#9fc3a8;--ink-faint:#6c8a74;
+  --rule-s:#2bd0bd;--rule-f:#2a4a42;--line:#27402e;
+  --pop:#4ade6a;--pop-soft:#163a1f;--zing:#d7f24d;
+  --ok:#2fd79a;--ok-soft:#0f3b2b;--no:#ff7355;--no-soft:#4a1d14;
+  /* the accent is light here, so what sits on it has to be dark */
+  --on-pop:#0c1710;
   color-scheme:dark}
 
 html,body{min-height:100%}
@@ -86,7 +93,7 @@ button{font:inherit;color:inherit}
 .stamps{display:flex;gap:.25rem}
 .stamp{width:1.25rem;height:1.25rem;display:grid;place-items:center;font-family:var(--ja);font-size:.6875rem;
   border:1px solid var(--rule-f);color:var(--ink-faint);border-radius:2px}
-.stamp.on{background:var(--pop);border-color:var(--pop);color:#fff}
+.stamp.on{background:var(--pop);border-color:var(--pop);color:var(--on-pop)}
 .stamp.today{box-shadow:0 0 0 2px var(--zing)}
 /* A frozen day is held, not earned, so it reads as an outline rather than a seal. */
 .stamp.froze{border-color:var(--rule-s);color:var(--rule-s)}
@@ -225,8 +232,8 @@ h2{font-size:1.125rem;line-height:1.35}
 .playbtn{width:4.75rem;height:4.75rem;border-radius:50%;border:1px solid var(--pop);
   background:var(--pop-soft);color:var(--pop);font-size:1.375rem;cursor:pointer;
   display:grid;place-items:center;padding-left:.2rem}
-.playbtn:hover{background:var(--pop);color:#fff}
-.playbtn.playing{background:var(--pop);color:#fff;animation:pulse 1s ease infinite}
+.playbtn:hover{background:var(--pop);color:var(--on-pop)}
+.playbtn.playing{background:var(--pop);color:var(--on-pop);animation:pulse 1s ease infinite}
 @keyframes pulse{50%{box-shadow:0 0 0 .5rem var(--pop-soft)}}
 .plan li.locked{color:var(--ink-faint)}
 .plan li.locked .k{color:var(--ink-faint)}
@@ -256,7 +263,7 @@ h2{font-size:1.125rem;line-height:1.35}
 .btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--pop)}
 .btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--line);font-weight:500;
   box-shadow:3px 3px 0 var(--line)}
-.btn.seal{background:var(--pop);border-color:var(--ink);color:#fff;box-shadow:3px 3px 0 var(--rule-s)}
+.btn.seal{background:var(--pop);border-color:var(--ink);color:var(--on-pop);box-shadow:3px 3px 0 var(--rule-s)}
 .btn-row{display:flex;gap:.5rem;flex-wrap:wrap}
 .btn-row .btn{flex:1;min-width:8rem}
 
