@@ -13,6 +13,14 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
    free point.
 3. **Build the sentence** — tap the words into order.
 
+**Every seventh day** a fourth round drops in between recall and the sentence: a
+**catch-up**, six questions at six seconds each, two answers. It deliberately does not
+ask what is due today — round two already does that. It takes the items whose review
+falls soonest without being due, which is to say the things nearest the edge of
+forgetting: words learned once, got right, and not seen since. It scores like any other
+round, and because the clock is the hard part a miss only moves a word back one box
+rather than all the way to the start.
+
 Two more rounds are written but stay shut until the habit is there, because they are
 harder and would be a reason to quit on day three:
 
@@ -47,6 +55,10 @@ A word can come up three times in one run once all five rounds are open — reca
 and listening — so an item is graded only once per run, and a later failure overrides an
 earlier pass. Failing to *write* a word you recognised is the truer signal.
 
+The catch-up round is the one exception to a miss resetting an item: it grades softly,
+one box back instead of to the start. Six seconds is not long enough for a blank to mean
+the word is gone.
+
 Each day introduces the lowest item of each stream not yet seen — one hiragana, one
 katakana, one loanword, one kanji word. Taking the lowest unseen item rather than the one
 at the lesson index means a stream added part-way through starts at the beginning rather
@@ -55,8 +67,8 @@ than skipping to wherever the learner had got to.
 Hiragana has no word stream of its own because it already has one: the kanji words are
 drilled in both directions, and the reading direction is hiragana.
 
-The content set carries 46 hiragana, 46 katakana, 52 katakana loanwords, 242 words,
-25 sentences and 24 grouping puzzles — 242 days of new material before it becomes
+The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 387 words,
+25 sentences and 28 grouping puzzles — 387 days of new material before it becomes
 review-only.
 
 `tools/check-content.js` validates the whole set: every word's romaji is re-derived from

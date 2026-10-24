@@ -76,7 +76,16 @@ const ROUNDS=[
 const roundsFor=day=>ROUNDS.filter(r=>day>=r.day);
 const BONUS_ROUND={key:"bonus",ja:"雷",name:"Lightning",
   blurb:"Eight questions, four seconds each, points on top."};
-const roundBy=k=>k==="bonus"?BONUS_ROUND:ROUNDS.filter(r=>r.key===k)[0];
+/* Every seventh day, between recall and the sentence. Not day-gated like the rounds
+   above: it has nothing to teach, so it can start as soon as there is anything to
+   come back to. */
+const RECAP_ROUND={key:"recap",ja:"復",name:"Catch up",
+  blurb:"Six quick questions on words you met a while ago.",
+  why:"Round two asks what the schedule says is due today. Once a week this goes behind that and pulls back the things nearest the edge of forgetting — words you learned, got right, and have not seen since.",
+  how:["Six questions, six seconds each, two answers — quick fire, not a thinking round.",
+       "They are the items whose review falls soonest, never today’s new ones.",
+       "It scores like any other round, and a miss only moves a word back one step rather than all the way to the start."]};
+const roundBy=k=>k==="bonus"?BONUS_ROUND:k==="recap"?RECAP_ROUND:ROUNDS.filter(r=>r.key===k)[0];
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
@@ -105,21 +114,25 @@ function dueIdsAt(n){return Object.keys(P.srs).filter(k=>P.srs[k].due<=n).sort((
    grading it each time would move its review date three boxes in a day and bump `seen`
    three times, flipping the question direction. One grade per item per run, and a later
    failure overrides an earlier pass: failing to write a word you recognised is the
-   truer signal. */
-function grade(id,ok){
+   truer signal.
+   A soft miss — the catch-up round, where the clock is the hard part — nudges an item
+   back one box instead of all the way to the start: six seconds is not enough time for
+   failing to answer to mean the word is gone. */
+function grade(id,ok,soft){
   const s=P.srs[id]||(P.srs[id]={box:0,due:0,seen:0});
+  const down=()=>{s.box=soft?Math.max(0,(s.box||0)-1):0};
   if(run){
     run.graded=run.graded||{};
     const prev=run.graded[id];
     if(prev){
       if(ok||prev==="bad")return;
       run.graded[id]="bad";
-      s.box=0; s.due=P.plays+IV[0];
+      down(); s.due=P.plays+IV[s.box];
       return;
     }
     run.graded[id]=ok?"ok":"bad";
   }
-  s.box=ok?Math.min(IV.length-1,s.box+1):0;
+  if(ok)s.box=Math.min(IV.length-1,s.box+1); else down();
   s.seen=(s.seen||0)+1;
   s.due=P.plays+IV[s.box];
 }
@@ -245,9 +258,10 @@ function renderStart(){
   const nw=newToday(), newN=nw.length;
   const qn=quizIdsFor(nw,(P.plays||0)+1).length;
   let line;
-  const nr=roundsFor(n).length;
-  const head=["","One round","Two rounds","Three rounds","Four rounds","Five rounds"][nr]
-    +", "+["","half a minute","a minute","a minute and a half","two minutes","two and a half minutes"][nr]+". ";
+  const nr=roundsFor(n).length+(recapDay(n)?1:0);
+  const head=["","One round","Two rounds","Three rounds","Four rounds","Five rounds","Six rounds"][nr]
+    +", "+["","half a minute","a minute","a minute and a half","two minutes",
+           "two and a half minutes","three minutes"][nr]+". ";
   if(P.plays===0) line=head+"A hiragana, a katakana, a loanword and a kanji word to start.";
   else if(newN) line=head+newN+" new, "+qn+" to recall.";
   else line=head+qn+" to recall — no new characters left.";
@@ -261,12 +275,20 @@ function renderStart(){
       +(held>=FREEZE_MAX?"That is the most you can hold.":"Another in "+togo+(togo===1?" day.":" days."));
   } else fn.hidden=true;
   const ul=$("plan"); ul.innerHTML="";
-  ROUNDS.forEach(r=>{
-    const open=n>=r.day, li=document.createElement("li");
+  const row=(r,open,instead)=>{
+    const li=document.createElement("li");
     li.className=open?"":"locked";
     li.innerHTML='<span class="k">'+r.ja+'</span><span><b>'+esc(r.name)+'.</b> '
-      +(open?esc(r.blurb):"Unlocks on day "+r.day+".")+'</span>';
+      +(open?esc(r.blurb):esc(instead))+'</span>';
     ul.appendChild(li);
+  };
+  ROUNDS.forEach(r=>{
+    row(r,n>=r.day,"Unlocks on day "+r.day+".");
+    /* the catch-up sits where it will actually be played, and shows on the other six
+       days too: the rhythm is easier to keep if you can see it coming */
+    if(r.key==="recall")
+      row(RECAP_ROUND,recapDay(n),
+        "Every seventh day — next on day "+(n+RECAP_EVERY-n%RECAP_EVERY)+".");
   });
   if(bonusEarned()){
     const li=document.createElement("li");
@@ -281,7 +303,7 @@ function renderStart(){
    explainer card before it rather than dropping the player into a mechanic they have
    never seen. */
 const STEP={group:()=>r1(),recall:()=>teach(),build:()=>r3(),write:()=>r4(),listen:()=>r5(),
-  bonus:()=>rBonus()};
+  recap:()=>rQF("recap"),bonus:()=>rQF("bonus")};
 function nextStep(){
   run.step++;
   const key=run.plan[run.step];
@@ -785,15 +807,42 @@ function nextListen(){
    being good rather than merely unbroken. Its points are pure upside — they are added
    to the score but not to the maximum, so a bad lightning round can never drag the day
    below what the normal rounds already earned. */
-const BONUS_AT=3, BONUS_BAR=0.85, BONUS_N=8, BONUS_MS=4000;
+const BONUS_AT=3, BONUS_BAR=0.85;
+const RECAP_EVERY=7;
 function bonusEarned(){
   const r=P.recent||[];
   return r.length>=BONUS_AT && r.slice(-BONUS_AT).every(x=>x>=BONUS_BAR);
 }
-function bonusIds(){
+const recapDay=day=>day%RECAP_EVERY===0;
+function bonusIds(n){
   const known=Object.keys(P.srs);
-  return pick(known,Math.min(BONUS_N,known.length));
+  return pick(known,Math.min(n,known.length));
 }
+/* The catch-up asks about whatever is nearest the edge of forgetting without being due
+   today: what round two already drilled is skipped, and the items whose review falls
+   soonest come first. Answering one here pushes its review further out, so the round
+   buys time rather than just repeating the day. */
+function recapIds(n){
+  const asked=(run.newIds||[]).concat(run.dueIds||[]);
+  return Object.keys(P.srs)
+    .filter(id=>asked.indexOf(id)<0&&P.srs[id].due>P.plays)
+    .sort((a,b)=>P.srs[a].due-P.srs[b].due)
+    .slice(0,n);
+}
+/* Both quick-fire rounds are the same shape and differ in three things: which items
+   they ask about, how long you get, and where the points land. `extra` is the
+   difference that matters — bonus points are added to the score but not to the
+   maximum, while the catch-up counts like any other round, in both. */
+const QF={
+  bonus:{n:8,ms:4000,extra:true,ids:bonusIds,ja:"雷",label:"Bonus round",
+    eyebrow:"Bonus round · lightning",lead:"Three strong days running",
+    intro:"Eight questions, four seconds each, two answers to choose from. Every one you get is a point on top — missing them all still cannot cost you anything.",
+    go:"Start the lightning round"},
+  recap:{n:6,ms:6000,extra:false,ids:recapIds,ja:"復",label:"Catch up",
+    eyebrow:"Catch up · every seventh day",lead:"Things you met a while ago",
+    intro:"Six questions, six seconds each, from what you have not seen for a while. They count towards today’s score like any other round, and a miss only nudges a word back one step rather than all the way to the start.",
+    go:"Start the catch-up"}
+};
 function xq(id){
   /* Two options and four seconds: this is recall at speed, not a thinking round, so
      the question is always the easy direction. */
@@ -808,29 +857,34 @@ function xq(id){
   return{big:it.face,ja:false,opts:shuffle([it.en,mean(other)]),answer:it.en,
     after:it.face+" — "+it.en};
 }
-function rBonus(){
-  run.xIds=bonusIds(); run.xi=0; run.bonus=0; run.xHits=[];
-  if(!run.xIds.length){pip(run.step,"done");return nextStep()}
+function rQF(key){
+  const c=QF[key], ids=c.ids(c.n);
+  run.qf={key,c,ids,i:0,got:0,hits:[]};
+  if(!ids.length){pip(run.step,"done");return nextStep()}
+  if(!c.extra)run.r6max=ids.length;
   show("sc-bonus"); pip(run.step,"live");
-  $("xEyebrow").textContent="Bonus round · lightning";
-  $("xQ").textContent="Three strong days running";
-  $("xBig").textContent="雷";
+  /* the magenta border marks a round that is extra; the catch-up is an ordinary one */
+  $("sc-bonus").className="card"+(c.extra?" bonus":"");
+  $("xEyebrow").textContent=c.eyebrow;
+  $("xQ").textContent=c.lead;
+  $("xBig").textContent=c.ja;
   $("xNote").className="note";
-  $("xNote").textContent=BONUS_N+" questions, four seconds each, two answers to choose from. "
-    +"Every one you get is a point on top — missing them all still cannot cost you anything.";
+  $("xNote").textContent=c.intro;
   $("xOpts").innerHTML="";
   $("xBar").className="";
   $("xDone").hidden=true;
   $("xGo").hidden=false;
-  $("xGo").onclick=()=>{$("xGo").hidden=true;nextBonus()};
+  $("xGo").textContent=c.go;
+  $("xGo").onclick=()=>{$("xGo").hidden=true;nextQF()};
 }
 let xTimer=null;
-function nextBonus(){
+function nextQF(){
   clearTimeout(xTimer);
-  if(run.xi>=run.xIds.length)return endBonus();
-  const id=run.xIds[run.xi], q=xq(id);
+  const f=run.qf, c=f.c;
+  if(f.i>=f.ids.length)return endQF();
+  const id=f.ids[f.i], q=xq(id);
   show("sc-bonus"); pip(run.step,"live");
-  $("xEyebrow").textContent="Bonus round · "+(run.xi+1)+" of "+run.xIds.length;
+  $("xEyebrow").textContent=c.label+" · "+(f.i+1)+" of "+f.ids.length;
   $("xQ").textContent="Quick — what is this?";
   $("xBig").textContent=q.big;
   $("xNote").className="note"; $("xNote").innerHTML="";
@@ -838,7 +892,7 @@ function nextBonus(){
   const bar=$("xBar");
   /* restart the animation: removing the class alone will not replay it */
   bar.className=""; void bar.offsetWidth;
-  bar.style.setProperty("--t",BONUS_MS+"ms");
+  bar.style.setProperty("--t",c.ms+"ms");
   bar.className="run";
   const box=$("xOpts"); box.innerHTML="";
   let answered=false;
@@ -846,13 +900,14 @@ function nextBonus(){
     if(answered)return; answered=true;
     clearTimeout(xTimer);
     bar.className="";
-    run.xHits.push(ok);
-    if(ok)run.bonus++;
+    f.hits.push(ok);
+    if(ok)f.got++;
+    if(!c.extra&&run.scored)grade(id,ok,true);
     [...box.children].forEach(x=>{x.disabled=true;
       if(x.textContent===q.answer)x.classList.add("right");else x.classList.add("dim")});
     $("xNote").className="note "+(ok?"good":"bad");
     $("xNote").textContent=q.after;
-    setTimeout(()=>{run.xi++;nextBonus()},ok?500:1000);
+    setTimeout(()=>{f.i++;nextQF()},ok?500:1000);
   };
   q.opts.forEach(o=>{
     const b=document.createElement("button");
@@ -860,25 +915,34 @@ function nextBonus(){
     b.onclick=()=>settle(o===q.answer);
     box.appendChild(b);
   });
-  xTimer=setTimeout(()=>settle(false),BONUS_MS);
+  xTimer=setTimeout(()=>settle(false),c.ms);
 }
 function tally(){
   const n=document.createElement("div");
   n.className="bonus-tally";
-  run.xHits.forEach(h=>{const i=document.createElement("i");i.className=h?"hit":"miss";n.appendChild(i)});
+  run.qf.hits.forEach(h=>{const i=document.createElement("i");i.className=h?"hit":"miss";n.appendChild(i)});
   $("xNote").innerHTML=""; $("xNote").appendChild(n);
 }
-function endBonus(){
+function endQF(){
   clearTimeout(xTimer);
+  const f=run.qf, c=f.c, n=f.ids.length;
   $("xBar").className="";
-  $("xEyebrow").textContent="Bonus round · done";
-  $("xQ").textContent=run.bonus+" of "+run.xIds.length;
-  $("xBig").textContent=run.bonus===run.xIds.length?"全":run.bonus>=run.xIds.length/2?"好":"次";
+  $("xEyebrow").textContent=c.label+" · done";
+  $("xQ").textContent=f.got+" of "+n;
+  $("xBig").textContent=f.got===n?"全":f.got>=n/2?"好":"次";
   $("xOpts").innerHTML="";
-  $("xNote").className="note "+(run.bonus?"good":"");
-  $("xNote").textContent=run.bonus
-    ? "+"+run.bonus+" on top of today’s score."
-    : "Nothing lost — bonus points only ever add.";
+  $("xNote").className="note "+(f.got?"good":"");
+  if(c.extra){
+    run.bonus=f.got;
+    $("xNote").textContent=f.got
+      ? "+"+f.got+" on top of today’s score."
+      : "Nothing lost — bonus points only ever add.";
+  }else{
+    run.r6=f.got; run.cIds=f.ids;
+    $("xNote").textContent=f.got===n
+      ? "All of it still there."
+      : "The ones you missed come back sooner.";
+  }
   pip(run.step,"done");
   $("xDone").hidden=false;
   $("xDone").textContent=run.plan[run.step+1]?"Carry on":"See today’s card";
@@ -887,12 +951,13 @@ function endBonus(){
 
 /* ---- finish ---- */
 async function finish(){
-  const base=run.r1+run.r2+run.r3+(run.r4||0)+(run.r5||0);
+  const base=run.r1+run.r2+run.r3+(run.r4||0)+(run.r5||0)+(run.r6||0);
   const r={date:today(),lesson:run.lesson,
            score:base,bonus:run.bonus||0,
-           max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0),
+           max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0)+(run.r6max||0),
            gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds,
-           wIds:run.wIds||[],lIds:run.lIds||[],noVoice:!!run.noVoice};
+           wIds:run.wIds||[],lIds:run.lIds||[],cIds:run.cIds||[],
+           rounds:run.plan.length,noVoice:!!run.noVoice};
   const scored=run.scored;
   if(scored){
     if(P.last===yesterday())P.streak=(P.streak||0)+1;
@@ -960,12 +1025,19 @@ function renderDone(r,scored){
       return [it.face,esc(it.kana)+" <i>"+esc(it.romaji)+"</i>"];
     }));
   }
+  const caught=r.cIds||[];
+  $("dCatchBlock").hidden=!caught.length;
+  rowsInto($("dCatchRows"),caught.map(id=>{
+    const it=item(id);
+    return [it.face,esc(it.en)+" <i>"+esc(it.romaji)+"</i>"];
+  }));
   const s=SENTENCES[r.sIdx];
   $("dSent").textContent=s.tiles.map(t=>t[0]).join("");
   $("dSentEn").textContent=s.en;
   $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
   setupReminder();
   $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow."
+    +(recapDay(P.lesson+1)?" A catch-up round comes round with it.":"")
     +(scored&&r.bonusNext?" Three strong days — a lightning round waits.":"");
 }
 
@@ -1037,10 +1109,13 @@ function startRun(scored){
   if(scored)P.plays=(P.plays||0)+1;
   const l=P.lesson, nw=newToday();
   const plan=roundsFor(l+1).map(r=>r.key);
+  /* straight after recall, where it reads as a continuation of it rather than a
+     fourth thing to get through */
+  if(recapDay(l+1))plan.splice(plan.indexOf("recall")+1,0,"recap");
   if(scored&&bonusEarned())plan.push("bonus");
   run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
        newIds:nw,dueIds:[],plan,step:-1,
-       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,bonus:0,qs:[],qi:0};
+       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,r6:0,r6max:0,cIds:[],bonus:0,qs:[],qi:0};
   buildPips(plan.length);
   $("pips").hidden=false;
   nextStep();
@@ -1049,7 +1124,7 @@ function refresh(){
   if(run)return;
   paintStreak();
   if(P.lastRun&&P.lastRun.date===today()){
-    buildPips(roundsFor((P.lastRun.lesson||0)+1).length);
+    buildPips(P.lastRun.rounds||roundsFor((P.lastRun.lesson||0)+1).length);
     $("pips").hidden=false; renderDone(P.lastRun,true);
   }
   else{$("pips").hidden=true;renderStart();show("sc-start")}
