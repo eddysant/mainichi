@@ -113,7 +113,7 @@ h2{font-size:1.125rem;line-height:1.35}
 .opt.dim{opacity:.45}
 .opts.grid2{display:grid;grid-template-columns:1fr 1fr}
 .opts.grid2 .opt{text-align:center;padding:.875rem .5rem}
-.opt.ja{font-family:var(--ja);font-size:1.1875rem}
+.opt.ja{font-family:var(--ja);font-size:1.1875rem;line-break:strict;word-break:normal}
 
 /* flash card face */
 .face{display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:1rem 0;
@@ -123,6 +123,10 @@ h2{font-size:1.125rem;line-height:1.35}
 /* A romaji prompt is Latin text, so it gets the Latin stack: mincho makes
    “tsu” look like a quotation rather than the thing being asked. */
 .face .big.roman{font-family:var(--ui);font-weight:600;font-size:clamp(2.25rem,11vw,3.25rem);letter-spacing:.01em}
+/* An English gloss is a phrase, not a character — “lift, elevator” at character size
+   fills the card and reads as shouting. */
+.face .big.gloss{font-family:var(--ui);font-weight:600;font-size:clamp(1.5rem,6.5vw,2rem);
+  letter-spacing:.01em;text-align:center;text-wrap:balance;line-height:1.15}
 .face .sub.roman{font-family:var(--ui);font-size:.6875rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-faint)}
 .face .lat{font-size:.8125rem;color:var(--ink-faint);letter-spacing:.06em}
 .newbadge{display:inline-flex;align-items:center;gap:.3rem;font-size:.625rem;text-transform:uppercase;
@@ -214,7 +218,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="hr"></div>
     <ul class="plan">
       <li><span class="k">一</span><span><b>Find the thread.</b> Five words appear one at a time — say what they share.</span></li>
-      <li><span class="k">二</span><span><b>Recall.</b> Two hiragana, two katakana, two kanji — today’s new ones and what’s due.</span></li>
+      <li><span class="k">二</span><span><b>Recall.</b> Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due.</span></li>
       <li><span class="k">三</span><span><b>Build a sentence.</b> Tap the words into order.</span></li>
     </ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
@@ -267,7 +271,7 @@ h2{font-size:1.125rem;line-height:1.35}
   <!-- done -->
   <section class="card" id="sc-done" hidden>
     <div class="eyebrow" id="dEyebrow">Done for today</div>
-    <div class="scoreline"><span class="big" id="dScore">0</span><span class="of" id="dOf">/ 14</span><span class="of" id="dGrade"></span></div>
+    <div class="scoreline"><span class="big" id="dScore">0</span><span class="of" id="dOf">/ 16</span><span class="of" id="dGrade"></span></div>
     <p class="note" id="dStreak"></p>
     <div class="hr"></div>
     <div class="recap">

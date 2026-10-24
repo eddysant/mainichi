@@ -138,7 +138,7 @@ h2{font-size:1.125rem;line-height:1.35}
 .opt.dim{opacity:.45}
 .opts.grid2{display:grid;grid-template-columns:1fr 1fr}
 .opts.grid2 .opt{text-align:center;padding:.875rem .5rem}
-.opt.ja{font-family:var(--ja);font-size:1.1875rem}
+.opt.ja{font-family:var(--ja);font-size:1.1875rem;line-break:strict;word-break:normal}
 
 /* flash card face */
 .face{display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:1rem 0;
@@ -148,6 +148,10 @@ h2{font-size:1.125rem;line-height:1.35}
 /* A romaji prompt is Latin text, so it gets the Latin stack: mincho makes
    “tsu” look like a quotation rather than the thing being asked. */
 .face .big.roman{font-family:var(--ui);font-weight:600;font-size:clamp(2.25rem,11vw,3.25rem);letter-spacing:.01em}
+/* An English gloss is a phrase, not a character — “lift, elevator” at character size
+   fills the card and reads as shouting. */
+.face .big.gloss{font-family:var(--ui);font-weight:600;font-size:clamp(1.5rem,6.5vw,2rem);
+  letter-spacing:.01em;text-align:center;text-wrap:balance;line-height:1.15}
 .face .sub.roman{font-family:var(--ui);font-size:.6875rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-faint)}
 .face .lat{font-size:.8125rem;color:var(--ink-faint);letter-spacing:.06em}
 .newbadge{display:inline-flex;align-items:center;gap:.3rem;font-size:.625rem;text-transform:uppercase;
@@ -239,7 +243,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="hr"></div>
     <ul class="plan">
       <li><span class="k">一</span><span><b>Find the thread.</b> Five words appear one at a time — say what they share.</span></li>
-      <li><span class="k">二</span><span><b>Recall.</b> Two hiragana, two katakana, two kanji — today’s new ones and what’s due.</span></li>
+      <li><span class="k">二</span><span><b>Recall.</b> Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due.</span></li>
       <li><span class="k">三</span><span><b>Build a sentence.</b> Tap the words into order.</span></li>
     </ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
@@ -292,7 +296,7 @@ h2{font-size:1.125rem;line-height:1.35}
   <!-- done -->
   <section class="card" id="sc-done" hidden>
     <div class="eyebrow" id="dEyebrow">Done for today</div>
-    <div class="scoreline"><span class="big" id="dScore">0</span><span class="of" id="dOf">/ 14</span><span class="of" id="dGrade"></span></div>
+    <div class="scoreline"><span class="big" id="dScore">0</span><span class="of" id="dOf">/ 16</span><span class="of" id="dGrade"></span></div>
     <p class="note" id="dStreak"></p>
     <div class="hr"></div>
     <div class="recap">
@@ -321,8 +325,8 @@ h2{font-size:1.125rem;line-height:1.35}
   <p class="foot" id="syncFoot"></p>
 </main>
 <script>
-/* Mainichi — content set. Each day introduces one hiragana, one katakana and one
-   kanji word; round two then drills two of each script. */
+/* Mainichi — content set. Each day introduces one hiragana, one katakana, one katakana
+   loanword and one kanji word; round two then drills two of each. */
 const KANA = [
   ["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],
   ["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],
@@ -349,6 +353,65 @@ const KATAKANA = [
   ["ヤ","ya"],["ユ","yu"],["ヨ","yo"],
   ["ラ","ra"],["リ","ri"],["ル","ru"],["レ","re"],["ロ","ro"],
   ["ワ","wa"],["ヲ","wo"],["ン","n"]
+];
+
+/* Katakana loanwords — where katakana pays off. Ordered by how often you meet them
+   rather than by which characters they use: a loanword is shown with its reading and
+   meaning, so it teaches the shapes in context long before all 46 are learned.
+   The fourth field is a note, for the ones that are not what an English reader expects. */
+const KATA_WORDS = [
+  ["コーヒー","koohii","coffee","The ー is a long vowel: koo-hii, four beats."],
+  ["テレビ","terebi","television","Clipped from テレビジョン. Japanese shortens long loans."],
+  ["パン","pan","bread","From Portuguese pão, not English — the oldest layer of loanwords."],
+  ["ビール","biiru","beer","From Dutch bier."],
+  ["カメラ","kamera","camera",""],
+  ["バス","basu","bus",""],
+  ["タクシー","takushii","taxi",""],
+  ["ホテル","hoteru","hotel",""],
+  ["レストラン","resutoran","restaurant",""],
+  ["ケーキ","keeki","cake",""],
+  ["ジュース","juusu","juice","Covers any soft drink, not just juice."],
+  ["ミルク","miruku","milk",""],
+  ["チーズ","chiizu","cheese",""],
+  ["サラダ","sarada","salad",""],
+  ["カレー","karee","curry",""],
+  ["ラーメン","raamen","ramen",""],
+  ["パソコン","pasokon","computer","パーソナルコンピューター squeezed to four beats."],
+  ["スマホ","sumaho","smartphone","スマートフォン, clipped the same way."],
+  ["メール","meeru","email",""],
+  ["ニュース","nyuusu","news",""],
+  ["スポーツ","supootsu","sport",""],
+  ["サッカー","sakkaa","football","The small ッ doubles the next sound: sak-kaa."],
+  ["テニス","tenisu","tennis",""],
+  ["ゲーム","geemu","game",""],
+  ["ギター","gitaa","guitar",""],
+  ["ピアノ","piano","piano","From Italian."],
+  ["ドア","doa","door",""],
+  ["ベッド","beddo","bed",""],
+  ["テーブル","teeburu","table",""],
+  ["シャツ","shatsu","shirt",""],
+  ["ズボン","zubon","trousers","From French jupon."],
+  ["コート","kooto","coat",""],
+  ["ネクタイ","nekutai","tie","From “necktie”."],
+  ["ベルト","beruto","belt",""],
+  ["ペン","pen","pen",""],
+  ["ノート","nooto","notebook","A notebook, never a written note."],
+  ["カード","kaado","card",""],
+  ["チケット","chiketto","ticket",""],
+  ["プレゼント","purezento","present, gift",""],
+  ["トイレ","toire","toilet","Clipped from トイレット."],
+  ["スーパー","suupaa","supermarket",""],
+  ["デパート","depaato","department store",""],
+  ["コンビニ","konbini","convenience store","コンビニエンスストア, clipped."],
+  ["アパート","apaato","flat, apartment",""],
+  ["エレベーター","erebeetaa","lift, elevator",""],
+  ["クラス","kurasu","class",""],
+  ["ページ","peeji","page",""],
+  ["スキー","sukii","skiing",""],
+  ["ゴルフ","gorufu","golf",""],
+  ["バスケット","basuketto","basketball",""],
+  ["アメリカ","amerika","America","Country names are katakana too."],
+  ["イギリス","igirisu","Britain","From Portuguese inglês, not “English”."]
 ];
 
 const WORDS = [
@@ -587,11 +650,16 @@ const CATEGORIES = [
   "Family members","Food","Parts of the body","Words about time","Verbs of movement",
   "Weather","Places in town","Size and price","Drinks","The five vowels",
   "Katakana loanwords","Question words","Seasons","Counting things","Nature words",
-  "Polite verb endings","Parts of a house","School subjects","Clothing"
+  "Polite verb endings","Parts of a house","School subjects","Clothing",
+  "Sports","Things with a screen","Things on a desk"
 ];
 
 /* Five clues, revealed one at a time. Guess what they share. */
 const GROUPS = [
+  { answer:"Clothing", clues:[["シャツ","shatsu","shirt"],["ズボン","zubon","trousers"],["コート","kooto","coat"],["ネクタイ","nekutai","tie"],["ベルト","beruto","belt"]] },
+  { answer:"Sports", clues:[["サッカー","sakkaa","football"],["テニス","tenisu","tennis"],["ゴルフ","gorufu","golf"],["スキー","sukii","skiing"],["バスケット","basuketto","basketball"]] },
+  { answer:"Things with a screen", clues:[["テレビ","terebi","television"],["パソコン","pasokon","computer"],["スマホ","sumaho","smartphone"],["ゲーム","geemu","game"],["カメラ","kamera","camera"]] },
+  { answer:"Things on a desk", clues:[["ペン","pen","pen"],["ノート","nooto","notebook"],["カード","kaado","card"],["メール","meeru","email"],["ページ","peeji","page"]] },
   { answer:"Numbers 1–5", clues:[["いち","ichi","one"],["に","ni","two"],["さん","san","three"],["し","shi","four"],["ご","go","five"]] },
   { answer:"Animals", clues:[["ねこ","neko","cat"],["いぬ","inu","dog"],["とり","tori","bird"],["さかな","sakana","fish"],["うま","uma","horse"]] },
   { answer:"Colours", clues:[["あか","aka","red"],["あお","ao","blue"],["しろ","shiro","white"],["くろ","kuro","black"],["きいろ","kiiro","yellow"]] },
@@ -634,15 +702,26 @@ function jaNum(n){ if(n<=10&&n>0)return n===10?"十":KANJI_NUM[n];
 
 /* ---- items ----
    Id prefixes are baked into the saved review schedule, so they stay as they were:
-   k = hiragana, t = katakana, w = kanji word. */
-const SCRIPTS=[["k","hiragana",KANA],["t","katakana",KATAKANA],["w","kanji",WORDS]];
+   k = hiragana, t = katakana, w = kanji word, v = katakana loanword.
+   Hiragana has no word stream of its own because it already has one — the kanji
+   words are drilled in both directions, and the reading direction is hiragana. */
+const SCRIPTS=[
+  ["k","hiragana",KANA],
+  ["t","katakana",KATAKANA],
+  ["v","katakana word",KATA_WORDS],
+  ["w","kanji",WORDS]
+];
 const PER_SCRIPT=2;
 const charItem=(p,script,set)=>i=>
   ({id:p+i,type:"char",script,set,face:set[i][0],kana:"",romaji:set[i][1],en:"the sound “"+set[i][1]+"”"});
 const kanaItem=charItem("k","hiragana",KANA);
 const kataItem=charItem("t","katakana",KATAKANA);
-const wordItem=i=>({id:"w"+i,type:"word",script:"kanji",face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3]});
-const item=id=>{const n=+id.slice(1);return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):wordItem(n)};
+const wordItem=i=>({id:"w"+i,type:"kanjiword",script:"kanji",set:WORDS,
+  face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3],note:""});
+const loanItem=i=>({id:"v"+i,type:"loanword",script:"katakana word",set:KATA_WORDS,
+  face:KATA_WORDS[i][0],kana:"",romaji:KATA_WORDS[i][1],en:KATA_WORDS[i][2],note:KATA_WORDS[i][3]||""});
+const item=id=>{const n=+id.slice(1);
+  return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):id[0]==="v"?loanItem(n):wordItem(n)};
 /* The lowest item of each script not yet introduced, rather than the one at the
    lesson index: that way adding katakana part-way through does not skip ア onwards,
    and a schedule that drifts for any other reason heals itself. */
@@ -698,10 +777,20 @@ function mkQ(id){
     return{id,q:"Which "+it.script+" is this sound?",big:it.romaji,roman:true,sub:"",opts,answer:it.face,
       grid:true,ja:true,after:it.romaji+" = "+it.face};
   }
+  /* Both word streams ask the meaning on even exposures. They differ on the odd one:
+     a kanji word hides its reading, so that is worth asking, but a katakana word IS
+     its reading — asking it would be free. Going English → katakana instead makes you
+     recall the shape of the word rather than just recognise it. */
   if(seen%2===0){
-    const opts=shuffle([it.en].concat(pick(WORDS.filter(w=>w[3]!==it.en),3).map(w=>w[3])));
+    const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
+    const opts=shuffle([it.en].concat(pick(it.set.filter(w=>mean(w)!==it.en),3).map(mean)));
     return{id,q:"What does this mean?",big:it.face,sub:it.kana,opts,answer:it.en,grid:false,ja:false,
-      after:it.face+" ("+it.kana+") — "+it.en};
+      after:it.face+(it.kana?" ("+it.kana+")":"")+" — "+it.en+(it.note?" · "+it.note:"")};
+  }
+  if(it.type==="loanword"){
+    const opts=shuffle([it.face].concat(pick(it.set.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
+    return{id,q:"Which word is this?",big:it.en,gloss:true,sub:"katakana",subRoman:true,opts,answer:it.face,
+      grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
   }
   const opts=shuffle([it.kana].concat(pick(WORDS.filter(w=>w[1]!==it.kana),3).map(w=>w[1])));
   return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
@@ -728,9 +817,9 @@ function renderStart(){
   const nw=newToday(), newN=nw.length;
   const qn=quizIdsFor(nw,(P.plays||0)+1).length;
   let line;
-  if(P.plays===0) line="Three rounds, about a minute. A hiragana, a katakana and a kanji word to start.";
-  else if(newN) line="Three rounds, about a minute. "+newN+" new, "+qn+" to recall.";
-  else line="Three rounds, about a minute. "+qn+" to recall — no new characters left.";
+  if(P.plays===0) line="Three rounds, a minute and a half. A hiragana, a katakana, a loanword and a kanji word to start.";
+  else if(newN) line="Three rounds, a minute and a half. "+newN+" new, "+qn+" to recall.";
+  else line="Three rounds, a minute and a half. "+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
   $("go").textContent=P.plays===0?"Start day one":"Start today’s puzzle";
 }
@@ -801,7 +890,7 @@ function teach(){
     $("tBig").textContent=it.face;
     $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
     $("tLat").textContent=it.romaji;
-    $("tEn").innerHTML="<b>"+esc(it.en)+"</b>";
+    $("tEn").innerHTML="<b>"+esc(it.en)+"</b>"+(it.note?" · "+esc(it.note):"");
     $("tNext").textContent=i<ids.length-1?"Next":"Try it";
     $("tNext").onclick=()=>{i++;one()};
   })();
@@ -836,7 +925,7 @@ function nextQ(){
   show("sc-recall"); pip(1,"live");
   $("rEyebrow").textContent="Round two · recall "+(run.qi+1)+" of "+run.qs.length;
   $("rQ").textContent=q.q;
-  $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"");
+  $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"")+(q.gloss?" gloss":"");
   $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
   $("rSub").className="sub"+(q.subRoman?" roman":"");
   $("rNote").textContent=""; $("rNote").className="note";

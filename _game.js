@@ -17,15 +17,26 @@ function jaNum(n){ if(n<=10&&n>0)return n===10?"十":KANJI_NUM[n];
 
 /* ---- items ----
    Id prefixes are baked into the saved review schedule, so they stay as they were:
-   k = hiragana, t = katakana, w = kanji word. */
-const SCRIPTS=[["k","hiragana",KANA],["t","katakana",KATAKANA],["w","kanji",WORDS]];
+   k = hiragana, t = katakana, w = kanji word, v = katakana loanword.
+   Hiragana has no word stream of its own because it already has one — the kanji
+   words are drilled in both directions, and the reading direction is hiragana. */
+const SCRIPTS=[
+  ["k","hiragana",KANA],
+  ["t","katakana",KATAKANA],
+  ["v","katakana word",KATA_WORDS],
+  ["w","kanji",WORDS]
+];
 const PER_SCRIPT=2;
 const charItem=(p,script,set)=>i=>
   ({id:p+i,type:"char",script,set,face:set[i][0],kana:"",romaji:set[i][1],en:"the sound “"+set[i][1]+"”"});
 const kanaItem=charItem("k","hiragana",KANA);
 const kataItem=charItem("t","katakana",KATAKANA);
-const wordItem=i=>({id:"w"+i,type:"word",script:"kanji",face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3]});
-const item=id=>{const n=+id.slice(1);return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):wordItem(n)};
+const wordItem=i=>({id:"w"+i,type:"kanjiword",script:"kanji",set:WORDS,
+  face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3],note:""});
+const loanItem=i=>({id:"v"+i,type:"loanword",script:"katakana word",set:KATA_WORDS,
+  face:KATA_WORDS[i][0],kana:"",romaji:KATA_WORDS[i][1],en:KATA_WORDS[i][2],note:KATA_WORDS[i][3]||""});
+const item=id=>{const n=+id.slice(1);
+  return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):id[0]==="v"?loanItem(n):wordItem(n)};
 /* The lowest item of each script not yet introduced, rather than the one at the
    lesson index: that way adding katakana part-way through does not skip ア onwards,
    and a schedule that drifts for any other reason heals itself. */
@@ -81,10 +92,20 @@ function mkQ(id){
     return{id,q:"Which "+it.script+" is this sound?",big:it.romaji,roman:true,sub:"",opts,answer:it.face,
       grid:true,ja:true,after:it.romaji+" = "+it.face};
   }
+  /* Both word streams ask the meaning on even exposures. They differ on the odd one:
+     a kanji word hides its reading, so that is worth asking, but a katakana word IS
+     its reading — asking it would be free. Going English → katakana instead makes you
+     recall the shape of the word rather than just recognise it. */
   if(seen%2===0){
-    const opts=shuffle([it.en].concat(pick(WORDS.filter(w=>w[3]!==it.en),3).map(w=>w[3])));
+    const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
+    const opts=shuffle([it.en].concat(pick(it.set.filter(w=>mean(w)!==it.en),3).map(mean)));
     return{id,q:"What does this mean?",big:it.face,sub:it.kana,opts,answer:it.en,grid:false,ja:false,
-      after:it.face+" ("+it.kana+") — "+it.en};
+      after:it.face+(it.kana?" ("+it.kana+")":"")+" — "+it.en+(it.note?" · "+it.note:"")};
+  }
+  if(it.type==="loanword"){
+    const opts=shuffle([it.face].concat(pick(it.set.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
+    return{id,q:"Which word is this?",big:it.en,gloss:true,sub:"katakana",subRoman:true,opts,answer:it.face,
+      grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
   }
   const opts=shuffle([it.kana].concat(pick(WORDS.filter(w=>w[1]!==it.kana),3).map(w=>w[1])));
   return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
@@ -111,9 +132,9 @@ function renderStart(){
   const nw=newToday(), newN=nw.length;
   const qn=quizIdsFor(nw,(P.plays||0)+1).length;
   let line;
-  if(P.plays===0) line="Three rounds, about a minute. A hiragana, a katakana and a kanji word to start.";
-  else if(newN) line="Three rounds, about a minute. "+newN+" new, "+qn+" to recall.";
-  else line="Three rounds, about a minute. "+qn+" to recall — no new characters left.";
+  if(P.plays===0) line="Three rounds, a minute and a half. A hiragana, a katakana, a loanword and a kanji word to start.";
+  else if(newN) line="Three rounds, a minute and a half. "+newN+" new, "+qn+" to recall.";
+  else line="Three rounds, a minute and a half. "+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
   $("go").textContent=P.plays===0?"Start day one":"Start today’s puzzle";
 }
@@ -184,7 +205,7 @@ function teach(){
     $("tBig").textContent=it.face;
     $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
     $("tLat").textContent=it.romaji;
-    $("tEn").innerHTML="<b>"+esc(it.en)+"</b>";
+    $("tEn").innerHTML="<b>"+esc(it.en)+"</b>"+(it.note?" · "+esc(it.note):"");
     $("tNext").textContent=i<ids.length-1?"Next":"Try it";
     $("tNext").onclick=()=>{i++;one()};
   })();
@@ -219,7 +240,7 @@ function nextQ(){
   show("sc-recall"); pip(1,"live");
   $("rEyebrow").textContent="Round two · recall "+(run.qi+1)+" of "+run.qs.length;
   $("rQ").textContent=q.q;
-  $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"");
+  $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"")+(q.gloss?" gloss":"");
   $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
   $("rSub").className="sub"+(q.subRoman?" roman":"");
   $("rNote").textContent=""; $("rNote").className="note";

@@ -1,5 +1,5 @@
-/* Mainichi — content set. Each day introduces one hiragana, one katakana and one
-   kanji word; round two then drills two of each script. */
+/* Mainichi — content set. Each day introduces one hiragana, one katakana, one katakana
+   loanword and one kanji word; round two then drills two of each. */
 const KANA = [
   ["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],
   ["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],
@@ -26,6 +26,65 @@ const KATAKANA = [
   ["ヤ","ya"],["ユ","yu"],["ヨ","yo"],
   ["ラ","ra"],["リ","ri"],["ル","ru"],["レ","re"],["ロ","ro"],
   ["ワ","wa"],["ヲ","wo"],["ン","n"]
+];
+
+/* Katakana loanwords — where katakana pays off. Ordered by how often you meet them
+   rather than by which characters they use: a loanword is shown with its reading and
+   meaning, so it teaches the shapes in context long before all 46 are learned.
+   The fourth field is a note, for the ones that are not what an English reader expects. */
+const KATA_WORDS = [
+  ["コーヒー","koohii","coffee","The ー is a long vowel: koo-hii, four beats."],
+  ["テレビ","terebi","television","Clipped from テレビジョン. Japanese shortens long loans."],
+  ["パン","pan","bread","From Portuguese pão, not English — the oldest layer of loanwords."],
+  ["ビール","biiru","beer","From Dutch bier."],
+  ["カメラ","kamera","camera",""],
+  ["バス","basu","bus",""],
+  ["タクシー","takushii","taxi",""],
+  ["ホテル","hoteru","hotel",""],
+  ["レストラン","resutoran","restaurant",""],
+  ["ケーキ","keeki","cake",""],
+  ["ジュース","juusu","juice","Covers any soft drink, not just juice."],
+  ["ミルク","miruku","milk",""],
+  ["チーズ","chiizu","cheese",""],
+  ["サラダ","sarada","salad",""],
+  ["カレー","karee","curry",""],
+  ["ラーメン","raamen","ramen",""],
+  ["パソコン","pasokon","computer","パーソナルコンピューター squeezed to four beats."],
+  ["スマホ","sumaho","smartphone","スマートフォン, clipped the same way."],
+  ["メール","meeru","email",""],
+  ["ニュース","nyuusu","news",""],
+  ["スポーツ","supootsu","sport",""],
+  ["サッカー","sakkaa","football","The small ッ doubles the next sound: sak-kaa."],
+  ["テニス","tenisu","tennis",""],
+  ["ゲーム","geemu","game",""],
+  ["ギター","gitaa","guitar",""],
+  ["ピアノ","piano","piano","From Italian."],
+  ["ドア","doa","door",""],
+  ["ベッド","beddo","bed",""],
+  ["テーブル","teeburu","table",""],
+  ["シャツ","shatsu","shirt",""],
+  ["ズボン","zubon","trousers","From French jupon."],
+  ["コート","kooto","coat",""],
+  ["ネクタイ","nekutai","tie","From “necktie”."],
+  ["ベルト","beruto","belt",""],
+  ["ペン","pen","pen",""],
+  ["ノート","nooto","notebook","A notebook, never a written note."],
+  ["カード","kaado","card",""],
+  ["チケット","chiketto","ticket",""],
+  ["プレゼント","purezento","present, gift",""],
+  ["トイレ","toire","toilet","Clipped from トイレット."],
+  ["スーパー","suupaa","supermarket",""],
+  ["デパート","depaato","department store",""],
+  ["コンビニ","konbini","convenience store","コンビニエンスストア, clipped."],
+  ["アパート","apaato","flat, apartment",""],
+  ["エレベーター","erebeetaa","lift, elevator",""],
+  ["クラス","kurasu","class",""],
+  ["ページ","peeji","page",""],
+  ["スキー","sukii","skiing",""],
+  ["ゴルフ","gorufu","golf",""],
+  ["バスケット","basuketto","basketball",""],
+  ["アメリカ","amerika","America","Country names are katakana too."],
+  ["イギリス","igirisu","Britain","From Portuguese inglês, not “English”."]
 ];
 
 const WORDS = [
@@ -264,11 +323,16 @@ const CATEGORIES = [
   "Family members","Food","Parts of the body","Words about time","Verbs of movement",
   "Weather","Places in town","Size and price","Drinks","The five vowels",
   "Katakana loanwords","Question words","Seasons","Counting things","Nature words",
-  "Polite verb endings","Parts of a house","School subjects","Clothing"
+  "Polite verb endings","Parts of a house","School subjects","Clothing",
+  "Sports","Things with a screen","Things on a desk"
 ];
 
 /* Five clues, revealed one at a time. Guess what they share. */
 const GROUPS = [
+  { answer:"Clothing", clues:[["シャツ","shatsu","shirt"],["ズボン","zubon","trousers"],["コート","kooto","coat"],["ネクタイ","nekutai","tie"],["ベルト","beruto","belt"]] },
+  { answer:"Sports", clues:[["サッカー","sakkaa","football"],["テニス","tenisu","tennis"],["ゴルフ","gorufu","golf"],["スキー","sukii","skiing"],["バスケット","basuketto","basketball"]] },
+  { answer:"Things with a screen", clues:[["テレビ","terebi","television"],["パソコン","pasokon","computer"],["スマホ","sumaho","smartphone"],["ゲーム","geemu","game"],["カメラ","kamera","camera"]] },
+  { answer:"Things on a desk", clues:[["ペン","pen","pen"],["ノート","nooto","notebook"],["カード","kaado","card"],["メール","meeru","email"],["ページ","peeji","page"]] },
   { answer:"Numbers 1–5", clues:[["いち","ichi","one"],["に","ni","two"],["さん","san","three"],["し","shi","four"],["ご","go","five"]] },
   { answer:"Animals", clues:[["ねこ","neko","cat"],["いぬ","inu","dog"],["とり","tori","bird"],["さかな","sakana","fish"],["うま","uma","horse"]] },
   { answer:"Colours", clues:[["あか","aka","red"],["あお","ao","blue"],["しろ","shiro","white"],["くろ","kuro","black"],["きいろ","kiiro","yellow"]] },
