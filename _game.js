@@ -78,7 +78,7 @@ const roundBy=k=>ROUNDS.filter(r=>r.key===k)[0];
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
-  lastRun:null,metRounds:[]});
+  lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[]});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -142,16 +142,25 @@ function mkQ(id){
      a kanji word hides its reading, so that is worth asking, but a katakana word IS
      its reading — asking it would be free. Going English → katakana instead makes you
      recall the shape of the word rather than just recognise it. */
+  const kanaOnly=it.face===it.kana;
   if(seen%2===0){
     const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
     const opts=shuffle([it.en].concat(pick(it.set.filter(w=>mean(w)!==it.en),3).map(mean)));
-    return{id,q:"What does this mean?",big:it.face,sub:it.kana,opts,answer:it.en,grid:false,ja:false,
-      after:it.face+(it.kana?" ("+it.kana+")":"")+" — "+it.en+(it.note?" · "+it.note:"")};
+    return{id,q:"What does this mean?",big:it.face,sub:kanaOnly?"":it.kana,opts,answer:it.en,
+      grid:false,ja:false,
+      after:it.face+(kanaOnly?"":" ("+it.kana+")")+" — "+it.en+(it.note?" · "+it.note:"")};
   }
-  if(it.type==="loanword"){
-    const opts=shuffle([it.face].concat(pick(it.set.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
-    return{id,q:"Which word is this?",big:it.en,gloss:true,sub:"katakana",subRoman:true,opts,answer:it.face,
-      grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
+  /* A word written only in kana IS its own reading, so asking how it is read would be a
+     free point. Those take the loanword direction instead: English, and you produce the
+     word. Distractors keep the same shape — three kanji next to one kana word would
+     give the answer away without anyone reading it. */
+  if(it.type==="loanword"||kanaOnly){
+    const shape=w=>(w[0]===w[1])===kanaOnly;
+    const pool=it.type==="loanword"?it.set:it.set.filter(shape);
+    const opts=shuffle([it.face].concat(pick(pool.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
+    return{id,q:"Which word is this?",big:it.en,gloss:true,
+      sub:it.type==="loanword"?"katakana":"hiragana",subRoman:true,
+      opts,answer:it.face,grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
   }
   const opts=shuffle([it.kana].concat(pick(WORDS.filter(w=>w[1]!==it.kana),3).map(w=>w[1])));
   return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
@@ -167,15 +176,64 @@ function buildPips(n){
   }
 }
 function pip(i,state){const el=$("pip"+i);if(el)el.className="pip"+(state?" "+state:"")}
+
+/* ---- streak freezes ----
+   One earned every ten days played, held three at most. A missed day spends one and the
+   streak survives. Settled when the page loads rather than on the next play, so the
+   streak you see on opening the app after a missed day is already the true one. */
+const FREEZE_EVERY=10, FREEZE_MAX=3;
+function earnFreezes(){
+  const owed=Math.floor((P.plays||0)/FREEZE_EVERY)-(P.freezesEarned||0);
+  if(owed<=0)return 0;
+  P.freezesEarned=(P.freezesEarned||0)+owed;
+  const before=P.freezes||0;
+  P.freezes=Math.min(FREEZE_MAX,before+owed);
+  return P.freezes-before;   /* what was earned over the cap is forfeited */
+}
+function daysBetween(a,b){return Math.round((new Date(b+"T00:00")-new Date(a+"T00:00"))/DAY)}
+/* What a freeze did is a fact about this page load, not saved state: it must survive
+   settleStreak running again when cloud progress arrives, and must not reappear
+   tomorrow. */
+let freezeNote=null;
+function settleStreak(){
+  if(!P.last||!P.streak)return;
+  const gap=daysBetween(P.last,today());
+  if(gap<=1)return;                     /* played today or yesterday: nothing missed */
+  const missed=gap-1;
+  if(missed>(P.freezes||0)){
+    /* More days missed than freezes held. The streak goes; the freezes stay, because
+       spending them on a streak that breaks anyway would be taking them for nothing. */
+    P.streak=0; P.last=null; save();
+    return;
+  }
+  P.freezes-=missed;
+  P.frozen=(P.frozen||[]).concat(
+    Array.from({length:missed},(_,i)=>dstr(new Date(Date.now()-(missed-i)*DAY)))).slice(-60);
+  P.last=yesterday();
+  freezeNote=missed===1?"A day missed — one freeze spent, and the streak stands."
+    :missed+" days missed — "+missed+" freezes spent, and the streak stands.";
+  save();
+}
 function paintStreak(){
   $("streakN").textContent=P.streak||0;
-  const h=new Set(P.history||[]), box=$("stamps");
+  const h=new Set(P.history||[]), f=new Set(P.frozen||[]), box=$("stamps");
   box.innerHTML="";
   for(let i=6;i>=0;i--){
     const d=dstr(new Date(Date.now()-i*DAY)), s=document.createElement("div");
-    s.className="stamp"+(h.has(d)?" on":"")+(i===0?" today":"");
-    s.textContent="日"; s.title=d;
+    s.className="stamp"+(h.has(d)?" on":f.has(d)?" froze":"")+(i===0?" today":"");
+    s.textContent=f.has(d)&&!h.has(d)?"雪":"日"; s.title=d+(f.has(d)&&!h.has(d)?" — frozen":"");
     box.appendChild(s);
+  }
+  const fb=$("freezes"), n=P.freezes||0;
+  fb.innerHTML="";
+  const lbl=document.createElement("span");
+  lbl.className="streak-lbl"; lbl.textContent=n===1?"freeze":"freezes";
+  fb.appendChild(lbl);
+  for(let i=0;i<FREEZE_MAX;i++){
+    const s=document.createElement("div");
+    s.className="stamp snow"+(i<n?" on":"");
+    s.textContent="雪"; s.title=i<n?"a freeze in hand":"empty";
+    fb.appendChild(s);
   }
 }
 function renderStart(){
@@ -192,6 +250,14 @@ function renderStart(){
   else if(newN) line=head+newN+" new, "+qn+" to recall.";
   else line=head+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
+  const fn=$("freezeLine");
+  if(freezeNote){ fn.hidden=false; fn.className="note good"; fn.textContent=freezeNote; }
+  else if((P.plays||0)>0){
+    const n=P.freezes||0, togo=FREEZE_EVERY-((P.plays||0)%FREEZE_EVERY);
+    fn.hidden=false; fn.className="note";
+    fn.textContent=(n?n+(n===1?" freeze in hand":" freezes in hand")+". ":"No freezes in hand. ")
+      +(n>=FREEZE_MAX?"That is the most you can hold.":"Another in "+togo+(togo===1?" day.":" days."));
+  } else fn.hidden=true;
   const ul=$("plan"); ul.innerHTML="";
   ROUNDS.forEach(r=>{
     const open=n>=r.day, li=document.createElement("li");
@@ -719,6 +785,10 @@ async function finish(){
     else if(P.last!==r.date)P.streak=1;
     P.last=r.date;
     P.best=Math.max(P.best||0,P.streak);
+    r.freezeGot=earnFreezes();
+    r.freezeHeld=P.freezes||0;
+    r.freezeAtCap=r.freezeGot===0&&(P.freezes||0)>=FREEZE_MAX
+      &&(P.plays||0)%FREEZE_EVERY===0;
     P.history=Array.from(new Set((P.history||[]).concat([r.date]))).slice(-60);
     P.lesson=run.lesson+1;
     P.lastRun=r;
@@ -744,8 +814,12 @@ function renderDone(r,scored){
   $("dScore").textContent=r.score;
   $("dOf").textContent="/ "+r.max;
   $("dGrade").textContent=pct===1?"· clean sweep":pct>=.85?"· strong":pct>=.6?"· solid":"· it’ll stick tomorrow";
+  let fl="";
+  if(scored&&r.freezeGot) fl=" <b>Freeze earned</b> — "+r.freezeHeld
+    +(r.freezeHeld===1?" in hand.":" in hand, "+FREEZE_MAX+" is the most you can hold.");
+  else if(scored&&r.freezeAtCap) fl=" A freeze was due, but you are holding the maximum of "+FREEZE_MAX+".";
   $("dStreak").innerHTML=scored
-    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."
+    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."+fl
     : "Streak and review schedule left untouched.";
   const g=GROUPS[r.gIdx];
   $("dGroupH").textContent="The thread — "+g.answer;
@@ -869,8 +943,10 @@ try{if("speechSynthesis" in window){speechSynthesis.getVoices();
   speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 
 const local=loadLocal(); if(local)P=local;
+settleStreak();
 refresh();
 initCloud().then(ok=>{
+  settleStreak();
   $("syncFoot").textContent=ok
     ? "Progress is saved to your Claude account, so it follows you between devices."
     : "Progress is saved in this browser only.";

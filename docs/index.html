@@ -83,6 +83,12 @@ button{font:inherit;color:inherit}
   border:1px solid var(--rule-f);color:var(--ink-faint);border-radius:2px}
 .stamp.on{background:var(--shu);border-color:var(--shu);color:#fff}
 .stamp.today{box-shadow:0 0 0 2px var(--shu-soft)}
+/* A frozen day is held, not earned, so it reads as an outline rather than a seal. */
+.stamp.froze{border-color:var(--rule-s);color:var(--rule-s)}
+.freezes{align-items:center;gap:.3rem}
+.freezes .streak-lbl{margin-right:.1rem}
+.stamp.snow{width:1rem;height:1rem;font-size:.5625rem;border-style:dashed}
+.stamp.snow.on{background:transparent;border-color:var(--rule-s);border-style:solid;color:var(--rule-s)}
 
 /* round pips */
 .pips{display:flex;align-items:center;gap:.5rem}
@@ -264,6 +270,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="streak">
       <div class="streak-row"><span class="streak-n" id="streakN">0</span><span class="streak-lbl">day streak</span></div>
       <div class="stamps" id="stamps"></div>
+      <div class="stamps freezes" id="freezes"></div>
     </div>
   </header>
 
@@ -273,6 +280,7 @@ h2{font-size:1.125rem;line-height:1.35}
   <section class="card" id="sc-start">
     <div class="daymark"><span class="n" id="dayN">1</span><span class="ja" id="dayJa">第一日</span></div>
     <p class="prompt" id="startLine">Three rounds, about fifty seconds. Nothing to catch up on.</p>
+    <p class="note" id="freezeLine" hidden></p>
     <div class="hr"></div>
     <ul class="plan" id="plan"></ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
@@ -555,7 +563,179 @@ const WORDS = [
   ["春","はる","haru","spring"],
   ["夏","なつ","natsu","summer"],
   ["秋","あき","aki","autumn"],
-  ["冬","ふゆ","fuyu","winter"]
+  ["冬","ふゆ","fuyu","winter"],
+  /* --- around town --- */
+  ["病院","びょういん","byouin","hospital"],
+  ["銀行","ぎんこう","ginkou","bank"],
+  ["図書館","としょかん","toshokan","library"],
+  ["会社","かいしゃ","kaisha","company"],
+  ["公園","こうえん","kouen","park"],
+  ["空港","くうこう","kuukou","airport"],
+  ["部屋","へや","heya","room"],
+  ["台所","だいどころ","daidokoro","kitchen"],
+  ["庭","にわ","niwa","garden"],
+  ["窓","まど","mado","window"],
+  ["鍵","かぎ","kagi","key"],
+  ["椅子","いす","isu","chair"],
+  ["机","つくえ","tsukue","desk"],
+  ["電話","でんわ","denwa","telephone"],
+  ["時計","とけい","tokei","clock, watch"],
+  /* --- things you carry --- */
+  ["傘","かさ","kasa","umbrella"],
+  ["靴","くつ","kutsu","shoes"],
+  ["服","ふく","fuku","clothes"],
+  ["帽子","ぼうし","boushi","hat"],
+  ["鞄","かばん","kaban","bag"],
+  ["財布","さいふ","saifu","wallet"],
+  ["紙","かみ","kami","paper"],
+  ["手紙","てがみ","tegami","a letter"],
+  ["新聞","しんぶん","shinbun","newspaper"],
+  ["写真","しゃしん","shashin","photograph"],
+  ["地図","ちず","chizu","map"],
+  ["切符","きっぷ","kippu","a ticket"],
+  ["お金","おかね","okane","money"],
+  /* --- days of the week --- */
+  ["月曜日","げつようび","getsuyoubi","Monday"],
+  ["火曜日","かようび","kayoubi","Tuesday"],
+  ["水曜日","すいようび","suiyoubi","Wednesday"],
+  ["木曜日","もくようび","mokuyoubi","Thursday"],
+  ["金曜日","きんようび","kinyoubi","Friday"],
+  ["土曜日","どようび","doyoubi","Saturday"],
+  ["日曜日","にちようび","nichiyoubi","Sunday"],
+  /* --- when --- */
+  ["朝","あさ","asa","morning"],
+  ["昼","ひる","hiru","noon, daytime"],
+  ["夜","よる","yoru","night"],
+  ["年","とし","toshi","year"],
+  ["今年","ことし","kotoshi","this year"],
+  ["来年","らいねん","rainen","next year"],
+  ["去年","きょねん","kyonen","last year"],
+  ["今週","こんしゅう","konshuu","this week"],
+  ["来週","らいしゅう","raishuu","next week"],
+  ["先週","せんしゅう","senshuu","last week"],
+  /* --- out in the world --- */
+  ["星","ほし","hoshi","star"],
+  ["火","ひ","hi","fire"],
+  ["土","つち","tsuchi","soil, earth"],
+  ["石","いし","ishi","stone"],
+  ["森","もり","mori","forest"],
+  ["池","いけ","ike","pond"],
+  ["島","しま","shima","island"],
+  ["船","ふね","fune","boat"],
+  ["自転車","じてんしゃ","jitensha","bicycle"],
+  ["飛行機","ひこうき","hikouki","aeroplane"],
+  ["天気","てんき","tenki","weather"],
+  ["旅行","りょこう","ryokou","a trip"],
+  ["仕事","しごと","shigoto","work, a job"],
+  ["休み","やすみ","yasumi","a rest, a holiday"],
+  ["音楽","おんがく","ongaku","music"],
+  ["映画","えいが","eiga","a film"],
+  /* --- people --- */
+  ["男","おとこ","otoko","man"],
+  ["女","おんな","onna","woman"],
+  ["子供","こども","kodomo","child"],
+  ["家族","かぞく","kazoku","family"],
+  ["両親","りょうしん","ryoushin","parents"],
+  ["赤ちゃん","あかちゃん","akachan","baby"],
+  ["医者","いしゃ","isha","doctor"],
+  ["おばあさん","おばあさん","obaasan","grandmother"],
+  ["おじいさん","おじいさん","ojiisan","grandfather"],
+  /* --- body --- */
+  ["顔","かお","kao","face"],
+  ["体","からだ","karada","body"],
+  ["心","こころ","kokoro","heart, mind"],
+  ["指","ゆび","yubi","finger"],
+  ["歯","は","ha","tooth"],
+  /* --- food --- */
+  ["卵","たまご","tamago","egg"],
+  ["米","こめ","kome","uncooked rice"],
+  ["塩","しお","shio","salt"],
+  ["砂糖","さとう","satou","sugar"],
+  ["果物","くだもの","kudamono","fruit"],
+  ["りんご","りんご","ringo","apple"],
+  ["みかん","みかん","mikan","mandarin orange"],
+  ["牛乳","ぎゅうにゅう","gyuunyuu","milk"],
+  ["お酒","おさけ","osake","alcohol, sake"],
+  /* --- verbs --- */
+  ["する","する","suru","to do"],
+  ["ある","ある","aru","to be, to exist"],
+  ["いる","いる","iru","to be (of a living thing)"],
+  ["寝る","ねる","neru","to sleep"],
+  ["起きる","おきる","okiru","to get up"],
+  ["働く","はたらく","hataraku","to work"],
+  ["休む","やすむ","yasumu","to rest"],
+  ["歩く","あるく","aruku","to walk"],
+  ["走る","はしる","hashiru","to run"],
+  ["待つ","まつ","matsu","to wait"],
+  ["作る","つくる","tsukuru","to make"],
+  ["使う","つかう","tsukau","to use"],
+  ["会う","あう","au","to meet"],
+  ["持つ","もつ","motsu","to hold, to carry"],
+  ["入る","はいる","hairu","to enter"],
+  ["出る","でる","deru","to go out"],
+  ["帰る","かえる","kaeru","to go home"],
+  ["乗る","のる","noru","to ride"],
+  ["降りる","おりる","oriru","to get off"],
+  ["開ける","あける","akeru","to open"],
+  ["閉める","しめる","shimeru","to close"],
+  ["教える","おしえる","oshieru","to teach"],
+  ["習う","ならう","narau","to learn"],
+  ["覚える","おぼえる","oboeru","to memorise"],
+  ["忘れる","わすれる","wasureru","to forget"],
+  ["分かる","わかる","wakaru","to understand"],
+  ["知る","しる","shiru","to know"],
+  ["思う","おもう","omou","to think"],
+  ["言う","いう","iu","to say"],
+  ["泳ぐ","およぐ","oyogu","to swim"],
+  ["遊ぶ","あそぶ","asobu","to play"],
+  ["洗う","あらう","arau","to wash"],
+  ["立つ","たつ","tatsu","to stand"],
+  ["座る","すわる","suwaru","to sit"],
+  /* --- adjectives --- */
+  ["暑い","あつい","atsui","hot (of weather)"],
+  ["寒い","さむい","samui","cold (of weather)"],
+  ["冷たい","つめたい","tsumetai","cold (to the touch)"],
+  ["暖かい","あたたかい","atatakai","warm"],
+  ["涼しい","すずしい","suzushii","cool"],
+  ["面白い","おもしろい","omoshiroi","interesting"],
+  ["楽しい","たのしい","tanoshii","enjoyable"],
+  ["忙しい","いそがしい","isogashii","busy"],
+  ["難しい","むずかしい","muzukashii","difficult"],
+  ["やさしい","やさしい","yasashii","kind, easy"],
+  ["強い","つよい","tsuyoi","strong"],
+  ["弱い","よわい","yowai","weak"],
+  ["広い","ひろい","hiroi","wide, spacious"],
+  ["狭い","せまい","semai","narrow"],
+  ["明るい","あかるい","akarui","bright"],
+  ["暗い","くらい","kurai","dark"],
+  ["近い","ちかい","chikai","near"],
+  ["遠い","とおい","tooi","far"],
+  ["多い","おおい","ooi","many"],
+  ["少ない","すくない","sukunai","few"],
+  ["重い","おもい","omoi","heavy"],
+  ["軽い","かるい","karui","light (in weight)"],
+  ["おいしい","おいしい","oishii","delicious"],
+  ["きれい","きれい","kirei","pretty, clean"],
+  ["元気","げんき","genki","well, full of energy"],
+  ["静か","しずか","shizuka","quiet"],
+  ["有名","ゆうめい","yuumei","famous"],
+  ["大丈夫","だいじょうぶ","daijoubu","all right"],
+  ["好き","すき","suki","liked"],
+  ["嫌い","きらい","kirai","disliked"],
+  /* --- how much, how often --- */
+  ["とても","とても","totemo","very"],
+  ["少し","すこし","sukoshi","a little"],
+  ["たくさん","たくさん","takusan","a lot"],
+  ["いつも","いつも","itsumo","always"],
+  ["時々","ときどき","tokidoki","sometimes"],
+  ["あまり","あまり","amari","not much"],
+  ["まだ","まだ","mada","still, not yet"],
+  ["もう","もう","mou","already"],
+  ["ちょっと","ちょっと","chotto","a little, a moment"],
+  ["すぐ","すぐ","sugu","right away"],
+  ["一緒に","いっしょに","isshoni","together"],
+  ["全部","ぜんぶ","zenbu","all of it"],
+  ["半分","はんぶん","hanbun","half"]
 ];
 
 /* What each particle actually does — used verbatim when a tile is placed wrong,
@@ -823,7 +1003,7 @@ const roundBy=k=>ROUNDS.filter(r=>r.key===k)[0];
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
-  lastRun:null,metRounds:[]});
+  lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[]});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -887,16 +1067,25 @@ function mkQ(id){
      a kanji word hides its reading, so that is worth asking, but a katakana word IS
      its reading — asking it would be free. Going English → katakana instead makes you
      recall the shape of the word rather than just recognise it. */
+  const kanaOnly=it.face===it.kana;
   if(seen%2===0){
     const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
     const opts=shuffle([it.en].concat(pick(it.set.filter(w=>mean(w)!==it.en),3).map(mean)));
-    return{id,q:"What does this mean?",big:it.face,sub:it.kana,opts,answer:it.en,grid:false,ja:false,
-      after:it.face+(it.kana?" ("+it.kana+")":"")+" — "+it.en+(it.note?" · "+it.note:"")};
+    return{id,q:"What does this mean?",big:it.face,sub:kanaOnly?"":it.kana,opts,answer:it.en,
+      grid:false,ja:false,
+      after:it.face+(kanaOnly?"":" ("+it.kana+")")+" — "+it.en+(it.note?" · "+it.note:"")};
   }
-  if(it.type==="loanword"){
-    const opts=shuffle([it.face].concat(pick(it.set.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
-    return{id,q:"Which word is this?",big:it.en,gloss:true,sub:"katakana",subRoman:true,opts,answer:it.face,
-      grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
+  /* A word written only in kana IS its own reading, so asking how it is read would be a
+     free point. Those take the loanword direction instead: English, and you produce the
+     word. Distractors keep the same shape — three kanji next to one kana word would
+     give the answer away without anyone reading it. */
+  if(it.type==="loanword"||kanaOnly){
+    const shape=w=>(w[0]===w[1])===kanaOnly;
+    const pool=it.type==="loanword"?it.set:it.set.filter(shape);
+    const opts=shuffle([it.face].concat(pick(pool.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
+    return{id,q:"Which word is this?",big:it.en,gloss:true,
+      sub:it.type==="loanword"?"katakana":"hiragana",subRoman:true,
+      opts,answer:it.face,grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
   }
   const opts=shuffle([it.kana].concat(pick(WORDS.filter(w=>w[1]!==it.kana),3).map(w=>w[1])));
   return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
@@ -912,15 +1101,64 @@ function buildPips(n){
   }
 }
 function pip(i,state){const el=$("pip"+i);if(el)el.className="pip"+(state?" "+state:"")}
+
+/* ---- streak freezes ----
+   One earned every ten days played, held three at most. A missed day spends one and the
+   streak survives. Settled when the page loads rather than on the next play, so the
+   streak you see on opening the app after a missed day is already the true one. */
+const FREEZE_EVERY=10, FREEZE_MAX=3;
+function earnFreezes(){
+  const owed=Math.floor((P.plays||0)/FREEZE_EVERY)-(P.freezesEarned||0);
+  if(owed<=0)return 0;
+  P.freezesEarned=(P.freezesEarned||0)+owed;
+  const before=P.freezes||0;
+  P.freezes=Math.min(FREEZE_MAX,before+owed);
+  return P.freezes-before;   /* what was earned over the cap is forfeited */
+}
+function daysBetween(a,b){return Math.round((new Date(b+"T00:00")-new Date(a+"T00:00"))/DAY)}
+/* What a freeze did is a fact about this page load, not saved state: it must survive
+   settleStreak running again when cloud progress arrives, and must not reappear
+   tomorrow. */
+let freezeNote=null;
+function settleStreak(){
+  if(!P.last||!P.streak)return;
+  const gap=daysBetween(P.last,today());
+  if(gap<=1)return;                     /* played today or yesterday: nothing missed */
+  const missed=gap-1;
+  if(missed>(P.freezes||0)){
+    /* More days missed than freezes held. The streak goes; the freezes stay, because
+       spending them on a streak that breaks anyway would be taking them for nothing. */
+    P.streak=0; P.last=null; save();
+    return;
+  }
+  P.freezes-=missed;
+  P.frozen=(P.frozen||[]).concat(
+    Array.from({length:missed},(_,i)=>dstr(new Date(Date.now()-(missed-i)*DAY)))).slice(-60);
+  P.last=yesterday();
+  freezeNote=missed===1?"A day missed — one freeze spent, and the streak stands."
+    :missed+" days missed — "+missed+" freezes spent, and the streak stands.";
+  save();
+}
 function paintStreak(){
   $("streakN").textContent=P.streak||0;
-  const h=new Set(P.history||[]), box=$("stamps");
+  const h=new Set(P.history||[]), f=new Set(P.frozen||[]), box=$("stamps");
   box.innerHTML="";
   for(let i=6;i>=0;i--){
     const d=dstr(new Date(Date.now()-i*DAY)), s=document.createElement("div");
-    s.className="stamp"+(h.has(d)?" on":"")+(i===0?" today":"");
-    s.textContent="日"; s.title=d;
+    s.className="stamp"+(h.has(d)?" on":f.has(d)?" froze":"")+(i===0?" today":"");
+    s.textContent=f.has(d)&&!h.has(d)?"雪":"日"; s.title=d+(f.has(d)&&!h.has(d)?" — frozen":"");
     box.appendChild(s);
+  }
+  const fb=$("freezes"), n=P.freezes||0;
+  fb.innerHTML="";
+  const lbl=document.createElement("span");
+  lbl.className="streak-lbl"; lbl.textContent=n===1?"freeze":"freezes";
+  fb.appendChild(lbl);
+  for(let i=0;i<FREEZE_MAX;i++){
+    const s=document.createElement("div");
+    s.className="stamp snow"+(i<n?" on":"");
+    s.textContent="雪"; s.title=i<n?"a freeze in hand":"empty";
+    fb.appendChild(s);
   }
 }
 function renderStart(){
@@ -937,6 +1175,14 @@ function renderStart(){
   else if(newN) line=head+newN+" new, "+qn+" to recall.";
   else line=head+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
+  const fn=$("freezeLine");
+  if(freezeNote){ fn.hidden=false; fn.className="note good"; fn.textContent=freezeNote; }
+  else if((P.plays||0)>0){
+    const n=P.freezes||0, togo=FREEZE_EVERY-((P.plays||0)%FREEZE_EVERY);
+    fn.hidden=false; fn.className="note";
+    fn.textContent=(n?n+(n===1?" freeze in hand":" freezes in hand")+". ":"No freezes in hand. ")
+      +(n>=FREEZE_MAX?"That is the most you can hold.":"Another in "+togo+(togo===1?" day.":" days."));
+  } else fn.hidden=true;
   const ul=$("plan"); ul.innerHTML="";
   ROUNDS.forEach(r=>{
     const open=n>=r.day, li=document.createElement("li");
@@ -1464,6 +1710,10 @@ async function finish(){
     else if(P.last!==r.date)P.streak=1;
     P.last=r.date;
     P.best=Math.max(P.best||0,P.streak);
+    r.freezeGot=earnFreezes();
+    r.freezeHeld=P.freezes||0;
+    r.freezeAtCap=r.freezeGot===0&&(P.freezes||0)>=FREEZE_MAX
+      &&(P.plays||0)%FREEZE_EVERY===0;
     P.history=Array.from(new Set((P.history||[]).concat([r.date]))).slice(-60);
     P.lesson=run.lesson+1;
     P.lastRun=r;
@@ -1489,8 +1739,12 @@ function renderDone(r,scored){
   $("dScore").textContent=r.score;
   $("dOf").textContent="/ "+r.max;
   $("dGrade").textContent=pct===1?"· clean sweep":pct>=.85?"· strong":pct>=.6?"· solid":"· it’ll stick tomorrow";
+  let fl="";
+  if(scored&&r.freezeGot) fl=" <b>Freeze earned</b> — "+r.freezeHeld
+    +(r.freezeHeld===1?" in hand.":" in hand, "+FREEZE_MAX+" is the most you can hold.");
+  else if(scored&&r.freezeAtCap) fl=" A freeze was due, but you are holding the maximum of "+FREEZE_MAX+".";
   $("dStreak").innerHTML=scored
-    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."
+    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."+fl
     : "Streak and review schedule left untouched.";
   const g=GROUPS[r.gIdx];
   $("dGroupH").textContent="The thread — "+g.answer;
@@ -1614,8 +1868,10 @@ try{if("speechSynthesis" in window){speechSynthesis.getVoices();
   speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 
 const local=loadLocal(); if(local)P=local;
+settleStreak();
 refresh();
 initCloud().then(ok=>{
+  settleStreak();
   $("syncFoot").textContent=ok
     ? "Progress is saved to your Claude account, so it follows you between devices."
     : "Progress is saved in this browser only.";

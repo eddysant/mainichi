@@ -58,6 +58,12 @@ button{font:inherit;color:inherit}
   border:1px solid var(--rule-f);color:var(--ink-faint);border-radius:2px}
 .stamp.on{background:var(--shu);border-color:var(--shu);color:#fff}
 .stamp.today{box-shadow:0 0 0 2px var(--shu-soft)}
+/* A frozen day is held, not earned, so it reads as an outline rather than a seal. */
+.stamp.froze{border-color:var(--rule-s);color:var(--rule-s)}
+.freezes{align-items:center;gap:.3rem}
+.freezes .streak-lbl{margin-right:.1rem}
+.stamp.snow{width:1rem;height:1rem;font-size:.5625rem;border-style:dashed}
+.stamp.snow.on{background:transparent;border-color:var(--rule-s);border-style:solid;color:var(--rule-s)}
 
 /* round pips */
 .pips{display:flex;align-items:center;gap:.5rem}
@@ -239,6 +245,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="streak">
       <div class="streak-row"><span class="streak-n" id="streakN">0</span><span class="streak-lbl">day streak</span></div>
       <div class="stamps" id="stamps"></div>
+      <div class="stamps freezes" id="freezes"></div>
     </div>
   </header>
 
@@ -248,6 +255,7 @@ h2{font-size:1.125rem;line-height:1.35}
   <section class="card" id="sc-start">
     <div class="daymark"><span class="n" id="dayN">1</span><span class="ja" id="dayJa">第一日</span></div>
     <p class="prompt" id="startLine">Three rounds, about fifty seconds. Nothing to catch up on.</p>
+    <p class="note" id="freezeLine" hidden></p>
     <div class="hr"></div>
     <ul class="plan" id="plan"></ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>

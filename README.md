@@ -8,7 +8,9 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
    repetition says is due, then older items of that stream to fill, so the round keeps
    its shape every day. Everything is asked in alternating directions — a character goes
    character→sound then sound→character; a kanji word goes meaning then reading; a
-   loanword goes meaning then English→katakana.
+   loanword goes meaning then English→katakana. A word written only in kana IS its own
+   reading, so those take the loanword direction too — asking how すぐ is read would be a
+   free point.
 3. **Build the sentence** — tap the words into order.
 
 Two more rounds are written but stay shut until the habit is there, because they are
@@ -47,9 +49,26 @@ than skipping to wherever the learner had got to.
 Hiragana has no word stream of its own because it already has one: the kanji words are
 drilled in both directions, and the reading direction is hiragana.
 
-The content set carries 46 hiragana, 46 katakana, 52 katakana loanwords, 81 N5 kanji
-words, 25 sentences and 24 grouping puzzles — 81 days of new material before it becomes
+The content set carries 46 hiragana, 46 katakana, 52 katakana loanwords, 242 words,
+25 sentences and 24 grouping puzzles — 242 days of new material before it becomes
 review-only.
+
+`tools/check-content.js` validates the whole set: every word's romaji is re-derived from
+its kana and compared, readings and meanings must be unique (two words sharing a reading
+would make a listening question unanswerable), every reading must be typeable on the
+round-four keyboard, and every grouping answer must exist as a selectable category. Run
+it after touching `content.js`.
+
+## Streak freezes
+
+One freeze is earned every ten days played, and you can hold three. A missed day spends
+one and the streak survives; miss more days than you hold and the streak goes, but the
+freezes stay — spending them on a streak that breaks anyway would be taking them for
+nothing.
+
+Freezes are settled when the page loads, not on the next play, so the streak you see on
+opening the app after a missed day is already the true one. Frozen days show as 雪 in the
+seven-day row instead of the 日 seal.
 
 ## Layout
 
@@ -60,6 +79,7 @@ review-only.
 | `_game.js` | game logic, spaced repetition, streak, storage |
 | `_standalone-head.html`, `_standalone-foot.html`, `_sw.js` | the PWA wrapper and offline shell |
 | `build.sh` | builds both targets |
+| `tools/check-content.js` | validates the content set — run after editing `content.js` |
 | `index.html` | single-file build for publishing as a Claude artifact |
 | `docs/` | the standalone site GitHub Pages serves |
 
