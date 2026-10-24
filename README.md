@@ -28,6 +28,12 @@ Each unlock gets a card explaining the mechanic the first time it appears, and t
 screen lists the locked rounds with the day they open — the thing you are building
 towards is visible from day one.
 
+There is also a **lightning round**, earned rather than unlocked: score 85% or better
+three days running and it appears at the end of the next run. Eight questions, two
+options, four seconds each. Its points are added to the score but *not* to the maximum,
+so it is pure upside — getting none of them cannot drag the day below what the ordinary
+rounds already earned.
+
 Play it: **https://eddysant.github.io/mainichi/** — add it to your home screen and it
 runs full screen and offline.
 
@@ -69,6 +75,25 @@ nothing.
 Freezes are settled when the page loads, not on the next play, so the streak you see on
 opening the app after a missed day is already the true one. Frozen days show as 雪 in the
 seven-day row instead of the 日 seal.
+
+## What it stores, and what leaves the device
+
+No cookies. Nothing is tracked, measured or reported. One `localStorage` key,
+`mainichi.v1`, holds the lesson number, the streak, the review schedule and the reminder
+time; it is first-party, never read by anything else, and clearing site data erases it.
+
+Exactly one request goes to a third party: the stylesheet from `fonts.googleapis.com`
+(and the font files from `fonts.gstatic.com`). That hands Google the visitor's IP
+address, which is the only part of this with a GDPR dimension — a German court held in
+2022 that embedding Google Fonts without consent breaches the GDPR. For a personal site
+with one user it is academic; before sharing it with anyone in the EU, either self-host
+the fonts or drop the webfonts for the system stack already in the font list, which on
+macOS and iOS means Hiragino and costs nothing.
+
+GitHub serves the site and keeps its own server logs, as any host does. Published as a
+Claude artifact, progress also syncs to the Claude account that opens it.
+
+Because there are no cookies and no tracking, no consent banner is required.
 
 ## Layout
 

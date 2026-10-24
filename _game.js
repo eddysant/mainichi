@@ -1,7 +1,7 @@
 (function(){
 const $=id=>document.getElementById(id);
 const SCREENS=["sc-start","sc-group","sc-teach","sc-recall","sc-build",
-  "sc-unlock","sc-write","sc-listen","sc-done"];
+  "sc-unlock","sc-write","sc-listen","sc-bonus","sc-done"];
 const show=id=>SCREENS.forEach(s=>{$(s).hidden=(s!==id)});
 const DAY=864e5;
 const dstr=d=>d.toLocaleDateString("en-CA");
@@ -74,11 +74,13 @@ const ROUNDS=[
         "Needs a Japanese voice on the device; the round is skipped if there is none."]}
 ];
 const roundsFor=day=>ROUNDS.filter(r=>day>=r.day);
-const roundBy=k=>ROUNDS.filter(r=>r.key===k)[0];
+const BONUS_ROUND={key:"bonus",ja:"雷",name:"Lightning",
+  blurb:"Eight questions, four seconds each, points on top."};
+const roundBy=k=>k==="bonus"?BONUS_ROUND:ROUNDS.filter(r=>r.key===k)[0];
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
-  lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[]});
+  lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[],recent:[]});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -253,10 +255,10 @@ function renderStart(){
   const fn=$("freezeLine");
   if(freezeNote){ fn.hidden=false; fn.className="note good"; fn.textContent=freezeNote; }
   else if((P.plays||0)>0){
-    const n=P.freezes||0, togo=FREEZE_EVERY-((P.plays||0)%FREEZE_EVERY);
+    const held=P.freezes||0, togo=FREEZE_EVERY-((P.plays||0)%FREEZE_EVERY);
     fn.hidden=false; fn.className="note";
-    fn.textContent=(n?n+(n===1?" freeze in hand":" freezes in hand")+". ":"No freezes in hand. ")
-      +(n>=FREEZE_MAX?"That is the most you can hold.":"Another in "+togo+(togo===1?" day.":" days."));
+    fn.textContent=(held?held+(held===1?" freeze in hand":" freezes in hand")+". ":"No freezes in hand. ")
+      +(held>=FREEZE_MAX?"That is the most you can hold.":"Another in "+togo+(togo===1?" day.":" days."));
   } else fn.hidden=true;
   const ul=$("plan"); ul.innerHTML="";
   ROUNDS.forEach(r=>{
@@ -266,6 +268,11 @@ function renderStart(){
       +(open?esc(r.blurb):"Unlocks on day "+r.day+".")+'</span>';
     ul.appendChild(li);
   });
+  if(bonusEarned()){
+    const li=document.createElement("li");
+    li.innerHTML='<span class="k">雷</span><span><b>Lightning.</b> '+esc(BONUS_ROUND.blurb)+'</span>';
+    ul.appendChild(li);
+  }
   $("go").textContent=P.plays===0?"Start day one":"Start today’s puzzle";
 }
 
@@ -273,12 +280,13 @@ function renderStart(){
    Each round ends by calling nextStep(); a round appearing for the first time gets an
    explainer card before it rather than dropping the player into a mechanic they have
    never seen. */
-const STEP={group:()=>r1(),recall:()=>teach(),build:()=>r3(),write:()=>r4(),listen:()=>r5()};
+const STEP={group:()=>r1(),recall:()=>teach(),build:()=>r3(),write:()=>r4(),listen:()=>r5(),
+  bonus:()=>rBonus()};
 function nextStep(){
   run.step++;
   const key=run.plan[run.step];
   if(!key)return finish();
-  if((P.metRounds||[]).indexOf(key)<0)return unlockCard(key);
+  if(key!=="bonus"&&(P.metRounds||[]).indexOf(key)<0)return unlockCard(key);
   STEP[key]();
 }
 function unlockCard(key){
@@ -772,10 +780,116 @@ function nextListen(){
   play.click();
 }
 
+/* ---- the bonus round ----
+   Earned by three strong days running, not by playing: it is the reward for a streak
+   being good rather than merely unbroken. Its points are pure upside — they are added
+   to the score but not to the maximum, so a bad lightning round can never drag the day
+   below what the normal rounds already earned. */
+const BONUS_AT=3, BONUS_BAR=0.85, BONUS_N=8, BONUS_MS=4000;
+function bonusEarned(){
+  const r=P.recent||[];
+  return r.length>=BONUS_AT && r.slice(-BONUS_AT).every(x=>x>=BONUS_BAR);
+}
+function bonusIds(){
+  const known=Object.keys(P.srs);
+  return pick(known,Math.min(BONUS_N,known.length));
+}
+function xq(id){
+  /* Two options and four seconds: this is recall at speed, not a thinking round, so
+     the question is always the easy direction. */
+  const it=item(id);
+  if(it.type==="char"){
+    const other=pick(it.set.filter(c=>c[1]!==it.romaji),1)[0];
+    return{big:it.face,ja:false,opts:shuffle([it.romaji,other[1]]),answer:it.romaji,
+      after:it.face+" = "+it.romaji};
+  }
+  const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
+  const other=pick(it.set.filter(w=>mean(w)!==it.en),1)[0];
+  return{big:it.face,ja:false,opts:shuffle([it.en,mean(other)]),answer:it.en,
+    after:it.face+" — "+it.en};
+}
+function rBonus(){
+  run.xIds=bonusIds(); run.xi=0; run.bonus=0; run.xHits=[];
+  if(!run.xIds.length){pip(run.step,"done");return nextStep()}
+  show("sc-bonus"); pip(run.step,"live");
+  $("xEyebrow").textContent="Bonus round · lightning";
+  $("xQ").textContent="Three strong days running";
+  $("xBig").textContent="雷";
+  $("xNote").className="note";
+  $("xNote").textContent=BONUS_N+" questions, four seconds each, two answers to choose from. "
+    +"Every one you get is a point on top — missing them all still cannot cost you anything.";
+  $("xOpts").innerHTML="";
+  $("xBar").className="";
+  $("xDone").hidden=true;
+  $("xGo").hidden=false;
+  $("xGo").onclick=()=>{$("xGo").hidden=true;nextBonus()};
+}
+let xTimer=null;
+function nextBonus(){
+  clearTimeout(xTimer);
+  if(run.xi>=run.xIds.length)return endBonus();
+  const id=run.xIds[run.xi], q=xq(id);
+  show("sc-bonus"); pip(run.step,"live");
+  $("xEyebrow").textContent="Bonus round · "+(run.xi+1)+" of "+run.xIds.length;
+  $("xQ").textContent="Quick — what is this?";
+  $("xBig").textContent=q.big;
+  $("xNote").className="note"; $("xNote").innerHTML="";
+  tally();
+  const bar=$("xBar");
+  /* restart the animation: removing the class alone will not replay it */
+  bar.className=""; void bar.offsetWidth;
+  bar.style.setProperty("--t",BONUS_MS+"ms");
+  bar.className="run";
+  const box=$("xOpts"); box.innerHTML="";
+  let answered=false;
+  const settle=ok=>{
+    if(answered)return; answered=true;
+    clearTimeout(xTimer);
+    bar.className="";
+    run.xHits.push(ok);
+    if(ok)run.bonus++;
+    [...box.children].forEach(x=>{x.disabled=true;
+      if(x.textContent===q.answer)x.classList.add("right");else x.classList.add("dim")});
+    $("xNote").className="note "+(ok?"good":"bad");
+    $("xNote").textContent=q.after;
+    setTimeout(()=>{run.xi++;nextBonus()},ok?500:1000);
+  };
+  q.opts.forEach(o=>{
+    const b=document.createElement("button");
+    b.className="opt"+(q.ja?" ja":""); b.type="button"; b.textContent=o;
+    b.onclick=()=>settle(o===q.answer);
+    box.appendChild(b);
+  });
+  xTimer=setTimeout(()=>settle(false),BONUS_MS);
+}
+function tally(){
+  const n=document.createElement("div");
+  n.className="bonus-tally";
+  run.xHits.forEach(h=>{const i=document.createElement("i");i.className=h?"hit":"miss";n.appendChild(i)});
+  $("xNote").innerHTML=""; $("xNote").appendChild(n);
+}
+function endBonus(){
+  clearTimeout(xTimer);
+  $("xBar").className="";
+  $("xEyebrow").textContent="Bonus round · done";
+  $("xQ").textContent=run.bonus+" of "+run.xIds.length;
+  $("xBig").textContent=run.bonus===run.xIds.length?"全":run.bonus>=run.xIds.length/2?"好":"次";
+  $("xOpts").innerHTML="";
+  $("xNote").className="note "+(run.bonus?"good":"");
+  $("xNote").textContent=run.bonus
+    ? "+"+run.bonus+" on top of today’s score."
+    : "Nothing lost — bonus points only ever add.";
+  pip(run.step,"done");
+  $("xDone").hidden=false;
+  $("xDone").textContent=run.plan[run.step+1]?"Carry on":"See today’s card";
+  $("xDone").onclick=nextStep;
+}
+
 /* ---- finish ---- */
 async function finish(){
+  const base=run.r1+run.r2+run.r3+(run.r4||0)+(run.r5||0);
   const r={date:today(),lesson:run.lesson,
-           score:run.r1+run.r2+run.r3+(run.r4||0)+(run.r5||0),
+           score:base,bonus:run.bonus||0,
            max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0),
            gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds,
            wIds:run.wIds||[],lIds:run.lIds||[],noVoice:!!run.noVoice};
@@ -785,6 +899,8 @@ async function finish(){
     else if(P.last!==r.date)P.streak=1;
     P.last=r.date;
     P.best=Math.max(P.best||0,P.streak);
+    P.recent=(P.recent||[]).concat([r.max?r.score/r.max:0]).slice(-6);
+    r.bonusNext=bonusEarned();
     r.freezeGot=earnFreezes();
     r.freezeHeld=P.freezes||0;
     r.freezeAtCap=r.freezeGot===0&&(P.freezes||0)>=FREEZE_MAX
@@ -811,7 +927,7 @@ function renderDone(r,scored){
   show("sc-done"); [...$("pips").children].forEach((_,i)=>pip(i,"done"));
   const pct=r.score/r.max;
   $("dEyebrow").textContent=scored?"Done for today":"Practice run · not scored";
-  $("dScore").textContent=r.score;
+  $("dScore").textContent=r.score+(r.bonus?"+"+r.bonus:"");
   $("dOf").textContent="/ "+r.max;
   $("dGrade").textContent=pct===1?"· clean sweep":pct>=.85?"· strong":pct>=.6?"· solid":"· it’ll stick tomorrow";
   let fl="";
@@ -849,7 +965,8 @@ function renderDone(r,scored){
   $("dSentEn").textContent=s.en;
   $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
   setupReminder();
-  $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow.";
+  $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow."
+    +(scored&&r.bonusNext?" Three strong days — a lightning round waits.":"");
 }
 
 
@@ -920,9 +1037,10 @@ function startRun(scored){
   if(scored)P.plays=(P.plays||0)+1;
   const l=P.lesson, nw=newToday();
   const plan=roundsFor(l+1).map(r=>r.key);
+  if(scored&&bonusEarned())plan.push("bonus");
   run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
        newIds:nw,dueIds:[],plan,step:-1,
-       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,qs:[],qi:0};
+       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,bonus:0,qs:[],qi:0};
   buildPips(plan.length);
   $("pips").hidden=false;
   nextStep();

@@ -2,42 +2,47 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* Layout: one phone-width column on manuscript paper. Three rounds advance in place
-   inside a single card; the streak reads as a row of hanko seals above it. */
+/* Layout: one phone-width column on manuscript paper. Rounds advance in place inside a
+   single card; the streak reads as a row of stamps above it.
+   Colour: late-90s Japanese stationery — magenta and cyan on warm paper, hard offset
+   shadows with no blur, nothing soft or gradient anywhere. */
 :root{
-  --paper:#f3f4f2;      /* pale cool grey, biased toward the rule indigo */
-  --panel:#fbfbf9;
-  --ink:#16181c;
-  --ink-soft:#5f646d;
-  --ink-faint:#9298a2;
-  --rule-s:#aab6cd;     /* genko yoshi printed rule */
-  --rule-f:#cdd5e3;
-  --line:#dde0da;
-  --shu:#c0402a;        /* hanko vermilion */
-  --shu-soft:#e8d3cd;
-  --ok:#2f6d4f;
-  --ok-soft:#d6e6dc;
-  --no:#a8341f;
-  --no-soft:#f0d9d3;
+  --paper:#fdf8ec;      /* warm stationery cream */
+  --panel:#ffffff;
+  --ink:#171438;        /* deep indigo, not black */
+  --ink-soft:#56508a;
+  --ink-faint:#9a93c4;
+  --rule-s:#00b8d4;     /* the genko yoshi rule, in pen cyan */
+  --rule-f:#aeeaf4;
+  --line:#e7e1f2;
+  --pop:#ff2e88;        /* hot magenta: the accent that was vermilion */
+  --pop-soft:#ffd9ea;
+  --zing:#ffcf2d;       /* highlighter yellow, used sparingly */
+  --ok:#00a06b;
+  --ok-soft:#c4f2e0;
+  --no:#ff4d2e;
+  --no-soft:#ffdcd3;
   --ja:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --ui:"Zen Kaku Gothic New","Hiragino Sans","Helvetica Neue",Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#131517;--panel:#1c1f22;--ink:#eceee9;--ink-soft:#a0a6ac;--ink-faint:#6d737a;
-  --rule-s:#495873;--rule-f:#333c4d;--line:#2a2e33;
-  --shu:#e2674a;--shu-soft:#4a2a22;--ok:#7fc39c;--ok-soft:#1f3a2c;--no:#e5806a;--no-soft:#3d221b;
+  --paper:#141029;--panel:#201a45;--ink:#f4f0ff;--ink-soft:#aba3d8;--ink-faint:#776fa8;
+  --rule-s:#25c9e0;--rule-f:#2c4a6b;--line:#322a5c;
+  --pop:#ff4da6;--pop-soft:#4f1636;--zing:#ffd84d;
+  --ok:#2fd79a;--ok-soft:#10402f;--no:#ff7355;--no-soft:#4a1d14;
   color-scheme:dark}}
 :root[data-theme="dark"]{
-  --paper:#131517;--panel:#1c1f22;--ink:#eceee9;--ink-soft:#a0a6ac;--ink-faint:#6d737a;
-  --rule-s:#495873;--rule-f:#333c4d;--line:#2a2e33;
-  --shu:#e2674a;--shu-soft:#4a2a22;--ok:#7fc39c;--ok-soft:#1f3a2c;--no:#e5806a;--no-soft:#3d221b;
+  --paper:#141029;--panel:#201a45;--ink:#f4f0ff;--ink-soft:#aba3d8;--ink-faint:#776fa8;
+  --rule-s:#25c9e0;--rule-f:#2c4a6b;--line:#322a5c;
+  --pop:#ff4da6;--pop-soft:#4f1636;--zing:#ffd84d;
+  --ok:#2fd79a;--ok-soft:#10402f;--no:#ff7355;--no-soft:#4a1d14;
   color-scheme:dark}
 
 html,body{min-height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--ui);-webkit-text-size-adjust:100%}
 *{box-sizing:border-box}
 button{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--shu);outline-offset:2px}
+:focus-visible{outline:2px solid var(--pop);outline-offset:2px}
 
 .app{max-width:30rem;margin:0 auto;padding-block:1.25rem 2.5rem;
   padding-left:max(16px,env(safe-area-inset-left,0px));
@@ -51,13 +56,13 @@ button{font:inherit;color:inherit}
 .brand-en{font-family:var(--ui);font-size:.6875rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-faint)}
 .streak{display:flex;flex-direction:column;align-items:flex-end;gap:.4rem}
 .streak-row{display:flex;align-items:baseline;gap:.35rem}
-.streak-n{font-family:var(--ja);font-weight:700;font-size:1.5rem;line-height:1;color:var(--shu);font-variant-numeric:tabular-nums}
+.streak-n{font-family:var(--ja);font-weight:700;font-size:1.5rem;line-height:1;color:var(--pop);font-variant-numeric:tabular-nums}
 .streak-lbl{font-size:.6875rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-faint)}
 .stamps{display:flex;gap:.25rem}
 .stamp{width:1.25rem;height:1.25rem;display:grid;place-items:center;font-family:var(--ja);font-size:.6875rem;
   border:1px solid var(--rule-f);color:var(--ink-faint);border-radius:2px}
-.stamp.on{background:var(--shu);border-color:var(--shu);color:#fff}
-.stamp.today{box-shadow:0 0 0 2px var(--shu-soft)}
+.stamp.on{background:var(--pop);border-color:var(--pop);color:#fff}
+.stamp.today{box-shadow:0 0 0 2px var(--zing)}
 /* A frozen day is held, not earned, so it reads as an outline rather than a seal. */
 .stamp.froze{border-color:var(--rule-s);color:var(--rule-s)}
 .freezes{align-items:center;gap:.3rem}
@@ -67,15 +72,16 @@ button{font:inherit;color:inherit}
 
 /* round pips */
 .pips{display:flex;align-items:center;gap:.5rem}
-.pip{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
-.pip span{display:block;height:100%;width:0;background:var(--shu);transition:width .35s ease}
+.pip{flex:1;height:5px;background:var(--line);border:1px solid var(--ink);border-radius:2px;overflow:hidden}
+.pip span{display:block;height:100%;width:0;background:var(--pop);transition:width .35s ease}
 .pip.done span{width:100%}
 .pip.live span{width:45%}
 
 /* card */
-.card{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:1.25rem;
-  display:flex;flex-direction:column;gap:1rem}
-.eyebrow{font-size:.6875rem;text-transform:uppercase;letter-spacing:.16em;color:var(--shu);font-weight:500}
+/* Hard offset shadows, no blur — the single cheapest thing that reads as 1990s. */
+.card{background:var(--panel);border:2px solid var(--ink);border-radius:3px;padding:1.25rem;
+  display:flex;flex-direction:column;gap:1rem;box-shadow:5px 5px 0 var(--rule-f)}
+.eyebrow{font-size:.6875rem;text-transform:uppercase;letter-spacing:.16em;color:var(--pop);font-weight:500}
 .prompt{font-size:1rem;line-height:1.5;color:var(--ink-soft);margin:0}
 h1,h2{margin:0;font-family:var(--ja);font-weight:700;text-wrap:balance}
 h1{font-size:1.625rem;line-height:1.25}
@@ -84,11 +90,12 @@ h2{font-size:1.125rem;line-height:1.35}
 
 /* start screen */
 .daymark{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
-.daymark .n{font-family:var(--ja);font-weight:700;font-size:2.5rem;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.daymark .n{font-family:var(--ja);font-weight:700;font-size:2.5rem;line-height:1;color:var(--ink);
+  font-variant-numeric:tabular-nums;background:linear-gradient(transparent 62%,var(--zing) 62%);padding-inline:.1em}
 .daymark .ja{font-family:var(--ja);font-size:1rem;color:var(--ink-soft)}
 .plan{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
 .plan li{display:flex;gap:.65rem;align-items:baseline;font-size:.875rem;color:var(--ink-soft)}
-.plan .k{font-family:var(--ja);color:var(--shu);font-weight:700;width:1.2em;flex:none;text-align:center}
+.plan .k{font-family:var(--ja);color:var(--pop);font-weight:700;width:1.2em;flex:none;text-align:center}
 
 /* genko yoshi clue cells */
 .cells{display:grid;grid-template-columns:repeat(5,1fr);gap:.375rem}
@@ -109,10 +116,10 @@ h2{font-size:1.125rem;line-height:1.35}
 
 /* options */
 .opts{display:flex;flex-direction:column;gap:.5rem}
-.opt{text-align:left;background:transparent;border:1px solid var(--line);border-radius:2px;
+.opt{text-align:left;background:transparent;border:2px solid var(--line);border-radius:2px;
   padding:.75rem .875rem;cursor:pointer;font-size:.9375rem;line-height:1.3;
   transition:border-color .15s,background .15s}
-.opt:hover:not(:disabled){border-color:var(--rule-s)}
+.opt:hover:not(:disabled){border-color:var(--pop);box-shadow:2px 2px 0 var(--pop-soft)}
 .opt:disabled{cursor:default}
 .opt.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ink)}
 .opt.wrong{border-color:var(--no);background:var(--no-soft);color:var(--ink);text-decoration:line-through}
@@ -136,11 +143,11 @@ h2{font-size:1.125rem;line-height:1.35}
 .face .sub.roman{font-family:var(--ui);font-size:.6875rem;text-transform:uppercase;letter-spacing:.18em;color:var(--ink-faint)}
 .face .lat{font-size:.8125rem;color:var(--ink-faint);letter-spacing:.06em}
 .newbadge{display:inline-flex;align-items:center;gap:.3rem;font-size:.625rem;text-transform:uppercase;
-  letter-spacing:.14em;color:var(--shu);border:1px solid var(--shu-soft);border-radius:2px;padding:.15rem .4rem}
+  letter-spacing:.14em;color:var(--pop);border:1px solid var(--pop-soft);border-radius:2px;padding:.15rem .4rem}
 
 /* sentence build */
 .patt{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap;padding:.45rem 0 .45rem .7rem;
-  border-left:2px solid var(--shu)}
+  border-left:2px solid var(--pop)}
 .patt-l{font-size:.5625rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint)}
 .patt-v{font-family:var(--ja);font-size:1.0625rem;letter-spacing:.02em}
 .slots{display:flex;flex-wrap:wrap;gap:.375rem}
@@ -149,7 +156,7 @@ h2{font-size:1.125rem;line-height:1.35}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sl .box{min-height:2.9rem;display:grid;place-items:center;padding:.2rem;border:1px dashed var(--rule-s);
   border-radius:2px;font-family:var(--ja);font-size:1.0625rem;text-align:center}
-.sl.next .box{border-style:solid;border-color:var(--shu)}
+.sl.next .box{border-style:solid;border-color:var(--pop)}
 .sl.filled .box{border-style:solid;border-color:var(--ok);background:var(--ok-soft);cursor:pointer}
 .sl.filled .lbl{color:var(--ok)}
 .tray{display:flex;flex-wrap:wrap;gap:.375rem;min-height:2.5rem}
@@ -157,7 +164,7 @@ h2{font-size:1.125rem;line-height:1.35}
   font-family:var(--ja);font-size:1.0625rem;padding:.4rem .6rem;border:1px solid var(--rule-s);
   border-radius:2px;background:transparent}
 .tile .g{font-family:var(--ui);font-size:.5625rem;letter-spacing:.02em;color:var(--ink-faint)}
-.tile:hover{border-color:var(--shu)}
+.tile:hover{border-color:var(--pop)}
 .tile.used{visibility:hidden}
 .tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
@@ -180,24 +187,35 @@ h2{font-size:1.125rem;line-height:1.35}
 .krow{display:grid;grid-template-columns:repeat(6,1fr);gap:.25rem}
 .krow.kvow{grid-template-columns:repeat(5,1fr);min-height:2.6rem}
 .krow.kmods{grid-template-columns:repeat(4,1fr)}
-.key{padding:.6rem .15rem;border:1px solid var(--line);background:transparent;border-radius:2px;
+.key{padding:.6rem .15rem;border:2px solid var(--line);background:transparent;border-radius:2px;
   font-family:var(--ja);font-size:1.125rem;line-height:1.1;cursor:pointer;text-align:center}
-.key:hover:not(:disabled){border-color:var(--shu)}
-.key.sel{border-color:var(--shu);color:var(--shu)}
+.key:hover:not(:disabled){border-color:var(--pop)}
+.key.sel{border-color:var(--pop);color:var(--pop);box-shadow:2px 2px 0 var(--pop-soft)}
 .key.mod{font-family:var(--ui);font-size:.8125rem;letter-spacing:.04em;color:var(--ink-soft)}
 /* The bare marks are tiny glyphs; at UI size they read as specks. */
 .key.mark{font-family:var(--ja);font-size:1.5rem;line-height:.8;color:var(--ink-soft);padding-top:.45rem}
 .key:disabled{opacity:.3;cursor:default}
 
 /* round five: listening */
-.playbtn{width:4.75rem;height:4.75rem;border-radius:50%;border:1px solid var(--shu);
-  background:var(--shu-soft);color:var(--shu);font-size:1.375rem;cursor:pointer;
+.playbtn{width:4.75rem;height:4.75rem;border-radius:50%;border:1px solid var(--pop);
+  background:var(--pop-soft);color:var(--pop);font-size:1.375rem;cursor:pointer;
   display:grid;place-items:center;padding-left:.2rem}
-.playbtn:hover{background:var(--shu);color:#fff}
-.playbtn.playing{background:var(--shu);color:#fff;animation:pulse 1s ease infinite}
-@keyframes pulse{50%{box-shadow:0 0 0 .5rem var(--shu-soft)}}
+.playbtn:hover{background:var(--pop);color:#fff}
+.playbtn.playing{background:var(--pop);color:#fff;animation:pulse 1s ease infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 .5rem var(--pop-soft)}}
 .plan li.locked{color:var(--ink-faint)}
 .plan li.locked .k{color:var(--ink-faint)}
+
+/* bonus round */
+.card.bonus{border-color:var(--pop);box-shadow:5px 5px 0 var(--pop-soft)}
+.timer{height:8px;border:2px solid var(--ink);border-radius:2px;overflow:hidden;background:var(--panel)}
+.timer span{display:block;height:100%;width:100%;background:var(--zing);transform-origin:left}
+.timer span.run{animation:drain var(--t,4s) linear forwards}
+@keyframes drain{to{transform:scaleX(0)}}
+.bonus-tally{display:flex;gap:.3rem;flex-wrap:wrap}
+.bonus-tally i{width:.75rem;height:.75rem;border:2px solid var(--line);border-radius:50%;font-style:normal}
+.bonus-tally i.hit{background:var(--zing);border-color:var(--ink)}
+.bonus-tally i.miss{background:var(--no-soft);border-color:var(--no)}
 
 /* daily reminder */
 .remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
@@ -206,18 +224,21 @@ h2{font-size:1.125rem;line-height:1.35}
 .remind-row .btn{flex:1;min-width:9rem}
 
 /* buttons */
-.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:2px;
-  padding:.8rem 1rem;cursor:pointer;font-size:.9375rem;font-weight:500;letter-spacing:.01em}
-.btn:hover{opacity:.9}
-.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--line);font-weight:400}
-.btn.seal{background:var(--shu);border-color:var(--shu);color:#fff}
+.btn{border:2px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:2px;
+  padding:.8rem 1rem;cursor:pointer;font-size:.9375rem;font-weight:700;letter-spacing:.01em;
+  box-shadow:3px 3px 0 var(--pop);transition:transform .06s,box-shadow .06s}
+.btn:hover{opacity:.92}
+.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--pop)}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--line);font-weight:500;
+  box-shadow:3px 3px 0 var(--line)}
+.btn.seal{background:var(--pop);border-color:var(--ink);color:#fff;box-shadow:3px 3px 0 var(--rule-s)}
 .btn-row{display:flex;gap:.5rem;flex-wrap:wrap}
 .btn-row .btn{flex:1;min-width:8rem}
 
 /* feedback line */
 .note{font-size:.8125rem;line-height:1.5;color:var(--ink-soft);margin:0}
 .note b{color:var(--ink);font-weight:500}
-.note a{color:var(--shu);text-underline-offset:2px}
+.note a{color:var(--pop);text-underline-offset:2px}
 .note.good{color:var(--ok)}
 .note.bad{color:var(--no)}
 
@@ -333,6 +354,17 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="face"><button class="playbtn" id="lPlay" aria-label="Play the word">▶</button></div>
     <div class="opts grid2" id="lOpts"></div>
     <p class="note" id="lNote"></p>
+  </section>
+
+  <!-- bonus: earned by three strong days running -->
+  <section class="card bonus" id="sc-bonus" hidden>
+    <div><div class="eyebrow" id="xEyebrow">Bonus round · lightning</div><h2 id="xQ">What does this mean?</h2></div>
+    <div class="timer"><span id="xBar"></span></div>
+    <div class="face"><div class="big" id="xBig"></div></div>
+    <div class="opts grid2" id="xOpts"></div>
+    <p class="note" id="xNote"></p>
+    <button class="btn seal" id="xGo" hidden>Start the lightning round</button>
+    <button class="btn" id="xDone" hidden>See today’s card</button>
   </section>
 
   <!-- done -->
