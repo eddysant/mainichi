@@ -54,20 +54,24 @@ img{max-width:100%}
   --ui:"Zen Kaku Gothic New","Hiragino Sans","Helvetica Neue",Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#0c1710;--panel:#13251a;--ink:#e9f5e7;--ink-soft:#9fc3a8;--ink-faint:#6c8a74;
-  --rule-s:#2bd0bd;--rule-f:#2a4a42;--line:#27402e;
-  --pop:#4ade6a;--pop-soft:#163a1f;--zing:#ff2d8f;
-  --ok:#2fd79a;--ok-soft:#0f3b2b;--no:#ff7355;--no-soft:#4a1d14;
+  /* night is neutral charcoal, so the green reads as ink on it rather than as a tint
+     of the paper itself */
+  --paper:#17191b;--panel:#212526;--ink:#edefee;--ink-soft:#a7afab;--ink-faint:#737a77;
+  --rule-s:#2bd0bd;--rule-f:#2f403e;--line:#2e3336;
+  --pop:#4ade6a;--pop-soft:#1d3322;--zing:#ff2d8f;
+  --ok:#2fd79a;--ok-soft:#14332a;--no:#ff7355;--no-soft:#3d1a13;
   /* the accent is light here, so what sits on it has to be dark */
-  --on-pop:#0c1710;
+  --on-pop:#17191b;
   color-scheme:dark}}
 :root[data-theme="dark"]{
-  --paper:#0c1710;--panel:#13251a;--ink:#e9f5e7;--ink-soft:#9fc3a8;--ink-faint:#6c8a74;
-  --rule-s:#2bd0bd;--rule-f:#2a4a42;--line:#27402e;
-  --pop:#4ade6a;--pop-soft:#163a1f;--zing:#ff2d8f;
-  --ok:#2fd79a;--ok-soft:#0f3b2b;--no:#ff7355;--no-soft:#4a1d14;
+  /* night is neutral charcoal, so the green reads as ink on it rather than as a tint
+     of the paper itself */
+  --paper:#17191b;--panel:#212526;--ink:#edefee;--ink-soft:#a7afab;--ink-faint:#737a77;
+  --rule-s:#2bd0bd;--rule-f:#2f403e;--line:#2e3336;
+  --pop:#4ade6a;--pop-soft:#1d3322;--zing:#ff2d8f;
+  --ok:#2fd79a;--ok-soft:#14332a;--no:#ff7355;--no-soft:#3d1a13;
   /* the accent is light here, so what sits on it has to be dark */
-  --on-pop:#0c1710;
+  --on-pop:#17191b;
   color-scheme:dark}
 
 html,body{min-height:100%}
