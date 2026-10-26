@@ -187,6 +187,7 @@ Because there are no cookies and no tracking, no consent banner is required.
 | `_standalone-head.html`, `_standalone-foot.html`, `_sw.js` | the PWA wrapper and offline shell |
 | `build.sh` | builds both targets |
 | `tools/make-tiles.js` | generates `tiles.js` from the example sentences |
+| `.claude/launch.json` | dev-server config, so the editor can serve `docs/` on port 4175 |
 | `tools/check-content.js` | validates the content set and the generated tiles — run after editing `content.js` |
 | `index.html` | single-file build for publishing as a Claude artifact |
 | `docs/` | the standalone site GitHub Pages serves |
@@ -208,3 +209,6 @@ streak is the whole point.
 ```sh
 ./build.sh && python3 -m http.server 4174 --directory docs
 ```
+
+`.claude/launch.json` does the same on port 4175 for editors that read it. Its path is
+relative, so run it from the project root.
