@@ -80,12 +80,12 @@ W.forEach(w=>{ for(const c of w[1]) if(!reach.has(c)) bad.push(w[0]+" ("+w[1]+")
    たべます — so the stem counts too, which is loose enough to pass a real inflection and
    still catch a sentence pasted against the wrong word. Duplicate keys are counted in
    the source, because the object literal would silently swallow them. */
-const byFace=new Map(W.map(w=>[w[0],w]));
+const byFace=new Map(W.map(w=>[w[0],w[1]]).concat(KW.map(w=>[w[0],w[0]])));
 Object.keys(USAGE||{}).forEach(k=>{
-  const w=byFace.get(k);
-  if(!w){ bad.push("usage key is not a word: "+k); return; }
+  const reading=byFace.get(k);
+  if(!reading){ bad.push("usage key is not a word: "+k); return; }
   const [ja,en]=USAGE[k];
-  const kana=w[1], stem=kana.length>1?kana.slice(0,-1):kana;
+  const kana=reading, stem=kana.length>1?kana.slice(0,-1):kana;
   /* the two irregular verbs change their stem outright: くる → きます, する → します */
   const IRREG={"来る":["き","こ"],"する":["し"]};
   const forms=[kana,stem].concat(IRREG[k]||[]);
@@ -93,6 +93,16 @@ Object.keys(USAGE||{}).forEach(k=>{
     bad.push("usage for "+k+" does not contain "+kana+": "+ja);
   if(!/\u3002$/.test(ja)) bad.push("usage for "+k+" does not end in \u3002");
   if(!en||!en.trim()) bad.push("usage for "+k+" has no English");
+});
+/* Coverage is complete, so hold it there: a word added without a sentence is a word
+   that will be taught as a bare gloss. And no two words may share a sentence — that is
+   always a copy-paste slip, never a choice. */
+W.concat(KW).forEach(w=>{ if(!USAGE[w[0]]) bad.push("no example sentence: "+w[0]); });
+const dupJa=new Map();
+Object.keys(USAGE||{}).forEach(k=>{
+  const ja=USAGE[k][0];
+  if(dupJa.has(ja)) bad.push("two words share a sentence: "+dupJa.get(ja)+" and "+k+" — "+ja);
+  else dupJa.set(ja,k);
 });
 const keyRe=/^\s*"([^"]+)":\s*\[/gm;
 const usageBlock=src.slice(src.indexOf("const USAGE"),src.indexOf("const PARTICLES"));
@@ -106,4 +116,4 @@ console.log("content OK");
 console.log("  "+W.length+" words \u2014 romaji re-derived from kana and matching, readings and meanings unique, all typeable");
 console.log("  "+KA.length+" hiragana / "+KT.length+" katakana, aligned; "+KW.length+" loanwords, all katakana");
 console.log("  "+GROUPS.length+" grouping puzzles, every answer a real category");
-console.log("  "+Object.keys(USAGE||{}).length+" example sentences, each containing its word");
+console.log("  "+Object.keys(USAGE||{}).length+" example sentences \u2014 one per word, none shared, each containing its word");

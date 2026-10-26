@@ -75,11 +75,16 @@ The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 387 wor
 25 sentences and 28 grouping puzzles — 387 days of new material before it becomes
 review-only.
 
-**Example sentences.** 103 of the words carry one: the words met first, and the ones
-whose English gloss misleads on its own. A gloss says what a word points at; only a
-sentence says what it does — 好き takes が and not を, and no English equivalent will ever
-tell you that. They appear twice: on the card where the word is first met, and again on
-the day’s done card, which is read without a clock running.
+**Example sentences.** Every word carries one — all 387 words and all 75 loanwords, 462
+in total, with no two sharing a sentence. A gloss says what a word points at; only a
+sentence says what it does — 好き takes が and not を, a hat is かぶる but trousers are はく,
+medicine is drunk, and no English equivalent will ever tell you that. 49 of them carry
+a note saying so, the ones where the English alone would mislead. They appear twice: on the card where the word is first met, and again
+on the day’s done card, which is read without a clock running. Characters have none,
+because a character is not used in a sentence, it is spelled with.
+
+Coverage is complete and the checker now holds it there: a word added without a sentence
+fails the check, because it would be taught as a bare gloss.
 
 `tools/check-content.js` validates the whole set: every word's romaji is re-derived from
 its kana and compared, readings and meanings must be unique (two words sharing a reading
