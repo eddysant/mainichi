@@ -1021,6 +1021,7 @@ const ROLE_SAY = {
   "noun":"a noun",
   "verb":"the verb",
   "verb ending":"the ending that completes the verb",
+  "te form":"the verb in its て form, which leads into the next one",
   "adjective":"a describing word",
   "adverb":"a word that says how, or how much",
   "place":"a place",

@@ -13,7 +13,7 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
    free point.
 3. **Build the sentence** — tap the words into order. The first 25 days use the
    hand-written sentences in order, because they are a grammar syllabus: は before を
-   before へ, each one introducing the next piece. After that the round draws on 351
+   before へ, each one introducing the next piece. After that the round draws on 389
    puzzles generated from the example sentences, so it only ever asks you to build a
    sentence out of a word you have already met — and met on an earlier day, not this
    morning, which makes the round consolidation rather than a preview. Played puzzles
@@ -89,7 +89,7 @@ Hiragana has no word stream of its own because it already has one: the kanji wor
 drilled in both directions, and the reading direction is hiragana.
 
 The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 387 words,
-25 hand-written sentences, 351 generated sentence puzzles and 28 grouping puzzles —
+25 hand-written sentences, 389 generated sentence puzzles and 28 grouping puzzles —
 387 days of new material before it becomes review-only.
 
 **Example sentences.** Every word carries one — all 387 words and all 75 loanwords, 462
@@ -117,9 +117,34 @@ grammatically valid parse exists; ambiguity is a rejection. Uniqueness alone is 
 enough, because it still accepted そら・は・あお・い・です — い is the stem of いる, and
 いです is not Japanese. So every generated form carries the shape it is (dictionary form,
 polite stem, て-form, past adjective) and every ending states which shapes may precede
-it: ます takes a stem, ください takes a て-form, です takes a noun or an adjective and
-never a verb stem. Two particles may not sit side by side, since をの is a parse and not
-a sentence. An adjective in front of its noun and a time or adverb word opening the
+it: ます takes a stem, ください and います take a て-form, です takes a noun or an
+adjective and never a verb stem. Two particles may not sit side by side, since をの is a
+parse and not a sentence.
+
+**The ending cannot be settled before the parse.** ねこがいます is ねこ・が・い + ます,
+while こまっています is こまって + います: the same characters split two ways, and only a
+successful parse of what comes before can say which. Taking the longest ending first got
+it wrong in both directions — it ate the て that a verb's own て-form supplies, and it
+would have taken います off ねこがいます and left a dangling particle. So every possible
+ending is tried and they all feed one uniqueness test.
+
+**Fewest tiles decides between valid parses**, because a whole word beats the same
+characters in pieces: はなします is はなし・ます, not はな・し・ます. That tie-break is only
+safe once the shape rules are in place — it is what made くる・まで・いき win on an
+earlier attempt, when nothing yet refused a dictionary-form verb mid-sentence. A tie is
+still a rejection.
+
+**Conjugation class comes from the word's own example sentence.** A る verb could be
+either class, and the difference matters: 知る is godan, so its polite form is 知ります
+and a stem of し is not a form of it at all — which is what made it collide with する and
+cost every noun+します compound. Nothing in the word list says which class a verb is in,
+but its sentence does, since the checker guarantees the sentence contains it: 知る's
+reads しっています, and って is godan.
+
+Two compounds are licensed by name: a noun in front of する is one verb (勉強 + します),
+and a て-form hands straight on to another verb (かさを もって いきます) — the one place a
+verb may stand mid-sentence, and the round labels it as the て form and says so when you
+tap the wrong tile into that slot. An adjective in front of its noun and a time or adverb word opening the
 sentence are the two things allowed to stand without a particle, and they are named in
 a list rather than inferred — relaxing the rule instead cost 60 puzzles and four times
 the ambiguity.
@@ -128,10 +153,12 @@ Part of speech comes free from the glosses: every verb and only a verb is glosse
 "to ...", and an い-adjective is the one written with its い in the kanji face, which
 先生 is not.
 
-351 of the 462 sentences earn a puzzle. The 111 rejects are listed by
-`node tools/make-tiles.js -v`, and they are a to-do list rather than a bug: most use a
-word the curriculum does not teach — そらはあおいです needs 青い, and the set has only
-青 — so the fix is to the sentence or the vocabulary, not to the parser.
+389 of the 462 sentences earn a puzzle. The 73 rejects are listed by
+`node tools/make-tiles.js -v`, and they are a to-do list rather than a bug: nearly all
+of them now need a word the curriculum does not teach — そらはあおいです needs 青い and
+the set has only 青; others need 降る, つける, かぶる, 取る — so the fix is to the
+vocabulary, not to the parser. Three are two sentences joined by だから, でも or それから,
+which would need a tile for the full stop between them.
 
 `tools/check-content.js` re-tests all of it against the committed `tiles.js` rather
 than trusting the tool that wrote it: the tiles must rejoin to the exact sentence they

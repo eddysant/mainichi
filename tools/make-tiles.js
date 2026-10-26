@@ -25,8 +25,22 @@ const pos=w=>/^to /.test(w[3]) ? "verb" : (/い$/.test(w[0])&&/い$/.test(w[1]) 
 
 const ROW={"う":"い","く":"き","ぐ":"ぎ","す":"し","つ":"ち","ぬ":"に","ぶ":"び","む":"み","る":"り"};
 const TE ={"う":"って","つ":"って","る":"って","く":"いて","ぐ":"いで","す":"して","ぬ":"んで","ぶ":"んで","む":"んで"};
-/* る verbs are ambiguous between the two conjugations without a dictionary, so both
-   stems are offered and the parse decides — or, if both fit, nothing does. */
+/* A る verb could be either conjugation, and the difference matters: 知る is godan, so
+   its polite form is 知ります and a stem of し is not a form of it at all — which is what
+   made it collide with する and cost every noun+します compound. Nothing in the word list
+   says which class a verb is in, but the word's own example sentence does, because the
+   checker guarantees the sentence contains it: 知る's reads しっています, and って is godan.
+   Where the sentence settles it, only that class's forms are generated. */
+function cls(w){
+  const kana=w[1], stem=kana.slice(0,-1), ja=(U[kana===w[1]?w[0]:w[0]]||[])[0]||"";
+  if(kana.slice(-1)!=="\u308b") return null;
+  const godan=[stem+"\u308a",stem+"\u3063\u3066"].some(f=>ja.indexOf(f)>=0);
+  const ichi =[stem+"\u307e",stem+"\u3066"].some(f=>ja.indexOf(f)>=0)
+    ||new RegExp(stem+"(\u307e\u3059|\u307e\u3057\u305f|\u307e\u305b\u3093)").test(ja);
+  if(godan&&!ichi) return "godan";
+  if(ichi&&!godan) return "ichidan";
+  return null;
+}
 function forms(w){
   const kana=w[1], last=kana.slice(-1), stem=kana.slice(0,-1), p=pos(w), out=[];
   const put=(s,shape)=>{ if(s) out.push({s,shape}) };
@@ -34,7 +48,8 @@ function forms(w){
   if(p==="verb"){
     if(ROW[last]) put(stem+ROW[last],"stem");
     if(TE[last])  put(stem+TE[last],"te");
-    if(last==="る"){ put(stem,"stem"); put(stem+"て","te"); }
+    const c=cls(w);
+    if(last==="る"&&c!=="godan"){ put(stem,"stem"); put(stem+"て","te"); }
     if(kana==="くる"){ put("き","stem"); put("きて","te"); }
     if(kana==="する"){ put("し","stem"); put("して","te"); }
   }
@@ -47,7 +62,7 @@ function forms(w){
 const ENDS=[
   ["ませんでした",["stem"]],["ましょう",["stem"]],["ませんか",["stem"]],["ません",["stem"]],
   ["ました",["stem"]],["ます",["stem"]],
-  ["ています",["te"]],["ている",["te"]],["ください",["te"]],
+  ["います",["te"]],["いる",["te"]],["ください",["te"]],
   ["でした",["dict","past"]],["です",["dict","past"]]
 ].sort((a,b)=>b[0].length-a[0].length);
 
@@ -83,9 +98,15 @@ KW.forEach((w,i)=>add(w[0],{kind:"word",id:"v"+i,face:w[0],en:w[2],pos:"noun",sh
 Object.keys(FUNC).forEach(k=>add(k,{kind:"func",face:k,en:FUNC[k][0],role:FUNC[k][1],shape:"dict",pos:"noun"}));
 Object.keys(PART).forEach(p=>add(p,{kind:"part",face:p,role:PART[p],shape:"part"}));
 
-function splitEnd(s){
-  for(const [e,shapes] of ENDS) if(s.endsWith(e)&&s.length>e.length) return [s.slice(0,-e.length),e,shapes];
-  return null;
+/* Every ending the tail could be, not just the longest. ねこがいます is ねこ・が・い +
+   ます, while こまっています is こまって + います — the same four characters, split two
+   ways, and only a successful parse of what comes before can tell them apart. Settling
+   the ending first got this wrong in both directions: it ate the て that a verb's own
+   て-form supplies, and it would have taken います off ねこがいます and left a dangling
+   particle. */
+function endSplits(s){
+  return ENDS.filter(([e])=>s.endsWith(e)&&s.length>e.length)
+             .map(([e,shapes])=>[s.slice(0,-e.length),e,shapes]);
 }
 /* Every parse of the body, then the grammar filter. Mid-sentence a word may only wear
    its dictionary form or an adverb — a bare polite stem or て-form floating in the
@@ -115,9 +136,17 @@ function valid(toks,endShapes){
   for(let i=0;i<toks.length-1;i++){
     const t=toks[i];
     if(t.kind==="part"){ if(toks[i+1].kind==="part") return false; continue }
-    if(t.shape!=="dict"&&t.shape!=="adv") return false;
+    if(t.shape!=="dict"&&t.shape!=="adv"&&t.shape!=="te") return false;
+    const nx=toks[i+1];
+    /* A て-form hands straight on to another verb: かさを もって いきます. It is the one
+       place a verb may stand mid-sentence, and the round labels it as what it is. */
+    /* て + いる is the progressive and belongs to the ending, so いる is not one of the
+       verbs a て-form may hand on to — otherwise よんでいます reads as よんで・い・ます. */
+    if(t.shape==="te"){ if(nx.kind==="word"&&nx.pos==="verb"&&nx.srf!=="い") continue; return false }
     if(t.pos==="verb") return false;
-    if(toks[i+1].kind==="part") continue;
+    if(nx.kind==="part") continue;
+    /* A noun in front of する is one verb: 勉強 + します is "study". */
+    if(nx.kind==="word"&&nx.face==="する"&&t.pos==="noun") continue;
     const licensed=t.pos==="adj"||t.shape==="adv"||BARE.has(t.srf)
       ||t.role==="pointer"||t.role==="adverb"||t.role==="time";
     if(!licensed) return false;
@@ -143,6 +172,7 @@ function roleOf(t,next,isPred){
   if(t.kind==="part") return t.role;
   if(t.role) return t.role;
   if(isPred) return t.pos==="adj"?"adjective":"noun";
+  if(t.shape==="te") return "te form";
   if(t.shape==="adv"||ADV.has(t.srf)) return "adverb";
   if(t.pos==="adj") return "adjective";
   if(TIME.has(t.srf)&&next&&next.kind!=="part") return "time";
@@ -153,25 +183,36 @@ function roleOf(t,next,isPred){
    VERB" reads as a shape rather than a row of identical letters. */
 const PAT=r=>({topic:"X",subject:"X",object:"X",noun:"B",adjective:"ADJ",verb:"VERB",
   "is / am":"です",place:"X",time:"TIME",person:"X",adverb:"ADV","question word":"",
-  pointer:""}[r]);
+  pointer:"","te form":"VERB-\u3066"}[r]);
 
 const made=[], rejected=[];
 Object.keys(U).forEach(k=>{
   const whole=U[k][0].replace(/。$/,"");
   const q=/か$/.test(whole);
   const core=q?whole.slice(0,-1):whole;
-  const sp=splitEnd(core);
-  if(!sp){ rejected.push([k,U[k][0],"no polite ending"]); return }
-  const [body,end,shapes]=sp;
-  const all=parses(body).filter(t=>valid(t,shapes)).filter(t=>t.some(x=>x.face===k));
-  const bySplit=new Map();
-  all.forEach(t=>{ const key=t.map(x=>x.srf).join("|"); (bySplit.get(key)||bySplit.set(key,[]).get(key)).push(t) });
+  const splits=endSplits(core);
+  if(!splits.length){ rejected.push([k,U[k][0],"no polite ending"]); return }
+  const bySplit=new Map(); const endOf=new Map();
+  splits.forEach(([body,e,shapes])=>{
+    parses(body).filter(t=>valid(t,shapes)).filter(t=>t.some(x=>x.face===k)).forEach(t=>{
+      const key=t.map(x=>x.srf).join("|")+"+"+e;
+      if(!bySplit.has(key)){ bySplit.set(key,[]); endOf.set(key,e) }
+      bySplit.get(key).push(t);
+    });
+  });
   if(!bySplit.size){ rejected.push([k,U[k][0],"no valid parse"]); return }
+  /* Fewest tiles wins — a whole word beats the same characters in pieces: はなします is
+     はなし・ます, not はな・し・ます. This is safe only because the shape rules already
+     refuse a dictionary-form verb mid-sentence, which is what made くる・まで・いき cheap
+     enough to win on an earlier attempt. A tie is still a rejection. */
+  const least=Math.min(...[...bySplit.values()].map(v=>v[0].length));
+  [...bySplit.keys()].forEach(key=>{ if(bySplit.get(key)[0].length>least) bySplit.delete(key) });
   if(bySplit.size>1){ rejected.push([k,U[k][0],"ambiguous: "+[...bySplit.keys()].join("  /  ")]); return }
   /* One split, but possibly several words that would write it that way. The tiles are
      the same either way; the gloss printed on them is not, so a genuine clash of
      meanings is a rejection rather than a coin toss. */
-  const cands=[...bySplit.values()][0];
+  const key0=[...bySplit.keys()][0], end=endOf.get(key0);
+  const cands=bySplit.get(key0);
   const glosses=new Set(cands.map(t=>t.map(x=>x.en||"").join("|")));
   if(glosses.size>1){ rejected.push([k,U[k][0],"two readings: "+[...glosses].join("  /  ")]); return }
   const toks=cands[0];
@@ -185,7 +226,8 @@ Object.keys(U).forEach(k=>{
     const isPred=i===toks.length-1;
     const verbish=isPred&&end!=="です"&&end!=="でした";
     const r=verbish?"verb":roleOf(t,toks[i+1],isPred);
-    const gloss=t.kind==="part"?"":(t.en||"").replace(/^to /,"");
+    /* "to hold, to carry" is a dictionary gloss; on a tile it reads as "hold, carry". */
+    const gloss=t.kind==="part"?"":(t.en||"").replace(/^to /,"").replace(/, to /g,", ");
     tiles.push([verbish?surf[i]+end:surf[i], gloss, r]);
   });
   if(end==="です"||end==="でした") tiles.push([end,"","is / am"]);
