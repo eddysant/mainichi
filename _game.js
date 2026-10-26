@@ -114,7 +114,7 @@ const roundBy=k=>k==="bonus"?BONUS_ROUND:k==="recap"?RECAP_ROUND
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
-  lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[],recent:[]});
+  lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[],recent:[],b3:[]});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
 function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
@@ -517,6 +517,29 @@ function nextQ(){
   });
 }
 
+/* ---- which sentence round three gets ----
+   The 25 hand-written sentences come first, in their own order, because they are a
+   grammar syllabus: は before を before へ, each introducing the next piece. After that
+   the round draws on tiles.js, generated from the example sentences, so it can only
+   offer a sentence built from a word the learner has met — and met on an earlier day,
+   not this morning, which makes the round consolidation rather than a preview. Played
+   puzzles are remembered, so none comes round again until all of them have. */
+const bPool=()=>typeof BUILD!=="undefined"?BUILD:[];
+const handRef=i=>"h"+i;
+function sentFor(ref){
+  const r=String(ref==null?"h0":ref);
+  if(r.charAt(0)==="h") return SENTENCES[(+r.slice(1)||0)%SENTENCES.length];
+  return bPool().find(b=>b.id===r)||SENTENCES[0];
+}
+function pickSent(l){
+  if(l<SENTENCES.length) return handRef(l);
+  const done=P.b3||(P.b3=[]), met=b=>P.srs[b.id];
+  let pool=bPool().filter(b=>met(b)&&done.indexOf(b.id)<0);
+  /* Everything available has been played: start the cycle again rather than stop. */
+  if(!pool.length){ P.b3=[]; pool=bPool().filter(met); }
+  return pool.length?pool[0].id:handRef(l%SENTENCES.length);
+}
+
 /* ---- round 3: build ----
    The old version hid the word meanings AND the word order, so the only strategy
    left was permuting until it turned green. Now every tile carries its meaning,
@@ -524,7 +547,7 @@ function nextQ(){
    the reason — which is where the grammar actually gets taught. */
 function r3(){
   show("sc-build"); pip(run.step,"live");
-  const s=SENTENCES[run.sIdx], T=s.tiles, slots=$("bSlots"), tray=$("bTray");
+  const s=run.sent, T=s.tiles, slots=$("bSlots"), tray=$("bTray");
   let at=0, slips=0, done=false;
   $("bEn").textContent=s.en;
   $("bPattern").textContent=s.pattern;
@@ -577,6 +600,8 @@ function r3(){
     if(at===T.length){
       done=true;
       run.r3=slips===0?3:slips<=2?2:1;
+      /* Spent only once it has actually been played through. */
+      if(String(run.sRef).charAt(0)!=="h"&&(P.b3||(P.b3=[])).indexOf(run.sRef)<0) P.b3.push(run.sRef);
       $("bNote").className="note good";
       $("bNote").textContent=slips===0?"First try — 3 of 3."
         :slips<=2?"Two slips or fewer — 2 of 3."
@@ -1036,7 +1061,7 @@ async function finish(){
            score:base,bonus:(run.bonus||0)+(run.flashGot||0),
            flashGot:run.flashGot||0,flashN:run.flashN||0,
            max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0)+(run.r6max||0),
-           gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds,
+           gIdx:run.gIdx,sRef:run.sRef,newIds:run.newIds,dueIds:run.dueIds,
            wIds:run.wIds||[],lIds:run.lIds||[],cIds:run.cIds||[],
            rounds:run.plan.length,noVoice:!!run.noVoice};
   const scored=run.scored;
@@ -1118,7 +1143,8 @@ function renderDone(r,scored){
     const it=item(id);
     return [it.face,esc(it.en)+" <i>"+esc(it.romaji)+"</i>"];
   }));
-  const s=SENTENCES[r.sIdx];
+  /* older saves carry a plain index into the hand-written set */
+  const s=sentFor(r.sRef!=null?r.sRef:handRef(r.sIdx||0));
   $("dSent").textContent=s.tiles.map(t=>t[0]).join("");
   $("dSentEn").textContent=s.en;
   $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
@@ -1205,7 +1231,8 @@ function startRun(scored){
   if(recapDay(l+1)&&!flashDay(l+1))plan.splice(plan.indexOf("recall")+1,0,"recap");
   if(flashDay(l+1))plan.push("flash");
   if(scored&&bonusEarned())plan.push("bonus");
-  run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
+  const sRef=pickSent(l);
+  run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sRef,sent:sentFor(sRef),
        newIds:nw,dueIds:[],plan,step:-1,
        r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,r6:0,r6max:0,cIds:[],
        bonus:0,flashGot:0,flashN:0,mode:null,qs:[],qi:0};

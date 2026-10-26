@@ -1022,6 +1022,7 @@ const ROLE_SAY = {
   "verb":"the verb",
   "verb ending":"the ending that completes the verb",
   "adjective":"a describing word",
+  "adverb":"a word that says how, or how much",
   "place":"a place",
   "time":"a time word",
   "person":"a person",

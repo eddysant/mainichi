@@ -11,7 +11,13 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
    loanword goes meaning then English→katakana. A word written only in kana IS its own
    reading, so those take the loanword direction too — asking how すぐ is read would be a
    free point.
-3. **Build the sentence** — tap the words into order.
+3. **Build the sentence** — tap the words into order. The first 25 days use the
+   hand-written sentences in order, because they are a grammar syllabus: は before を
+   before へ, each one introducing the next piece. After that the round draws on 351
+   puzzles generated from the example sentences, so it only ever asks you to build a
+   sentence out of a word you have already met — and met on an earlier day, not this
+   morning, which makes the round consolidation rather than a preview. Played puzzles
+   are remembered, so none comes round again until all of them have.
 
 **Every seventh day** a fourth round drops in between recall and the sentence: a
 **catch-up**, six questions at six seconds each, two answers. It deliberately does not
@@ -83,8 +89,8 @@ Hiragana has no word stream of its own because it already has one: the kanji wor
 drilled in both directions, and the reading direction is hiragana.
 
 The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 387 words,
-25 sentences and 28 grouping puzzles — 387 days of new material before it becomes
-review-only.
+25 hand-written sentences, 351 generated sentence puzzles and 28 grouping puzzles —
+387 days of new material before it becomes review-only.
 
 **Example sentences.** Every word carries one — all 387 words and all 75 loanwords, 462
 in total, with no two sharing a sentence. A gloss says what a word points at; only a
@@ -96,6 +102,41 @@ because a character is not used in a sentence, it is spelled with.
 
 Coverage is complete and the checker now holds it there: a word added without a sentence
 fails the check, because it would be taught as a bare gloss.
+
+## Where the sentence puzzles come from
+
+`tools/make-tiles.js` turns the example sentences into round-three puzzles and writes
+`tiles.js`. Japanese is written without spaces, so the tiles have to be recovered by
+parsing, and the danger is not failing to parse — it is parsing confidently and wrongly.
+くるまでいきます ("I go by car") also reads as くる・まで・いき ("came-until-go"), and a
+wrong split in the one round whose whole job is word order would teach the opposite of
+the truth.
+
+So the tool never guesses. A sentence earns a puzzle only when exactly **one**
+grammatically valid parse exists; ambiguity is a rejection. Uniqueness alone is not
+enough, because it still accepted そら・は・あお・い・です — い is the stem of いる, and
+いです is not Japanese. So every generated form carries the shape it is (dictionary form,
+polite stem, て-form, past adjective) and every ending states which shapes may precede
+it: ます takes a stem, ください takes a て-form, です takes a noun or an adjective and
+never a verb stem. Two particles may not sit side by side, since をの is a parse and not
+a sentence. An adjective in front of its noun and a time or adverb word opening the
+sentence are the two things allowed to stand without a particle, and they are named in
+a list rather than inferred — relaxing the rule instead cost 60 puzzles and four times
+the ambiguity.
+
+Part of speech comes free from the glosses: every verb and only a verb is glossed
+"to ...", and an い-adjective is the one written with its い in the kanji face, which
+先生 is not.
+
+351 of the 462 sentences earn a puzzle. The 111 rejects are listed by
+`node tools/make-tiles.js -v`, and they are a to-do list rather than a bug: most use a
+word the curriculum does not teach — そらはあおいです needs 青い, and the set has only
+青 — so the fix is to the sentence or the vocabulary, not to the parser.
+
+`tools/check-content.js` re-tests all of it against the committed `tiles.js` rather
+than trusting the tool that wrote it: the tiles must rejoin to the exact sentence they
+came from, every role must be one the round can describe in words, and no puzzle may
+open with a particle or put two in a row — which is what a bad parse looks like.
 
 `tools/check-content.js` validates the whole set: every word's romaji is re-derived from
 its kana and compared, readings and meanings must be unique (two words sharing a reading
@@ -139,16 +180,19 @@ Because there are no cookies and no tracking, no consent banner is required.
 
 | path | what it is |
 | --- | --- |
+| `tiles.js` | **generated** — round-three tile puzzles; run `tools/make-tiles.js` after editing `content.js` |
 | `content.js` | the whole curriculum — hiragana, katakana, loanwords, kanji words, sentences, grouping puzzles |
 | `_head.html` | title, styles, markup |
 | `_game.js` | game logic, spaced repetition, streak, storage |
 | `_standalone-head.html`, `_standalone-foot.html`, `_sw.js` | the PWA wrapper and offline shell |
 | `build.sh` | builds both targets |
-| `tools/check-content.js` | validates the content set — run after editing `content.js` |
+| `tools/make-tiles.js` | generates `tiles.js` from the example sentences |
+| `tools/check-content.js` | validates the content set and the generated tiles — run after editing `content.js` |
 | `index.html` | single-file build for publishing as a Claude artifact |
 | `docs/` | the standalone site GitHub Pages serves |
 
-Edit the sources, run `./build.sh`, commit. Everything in `index.html` and `docs/` is generated.
+Edit the sources, run `node tools/make-tiles.js && node tools/check-content.js && ./build.sh`,
+commit. Everything in `tiles.js`, `index.html` and `docs/` is generated.
 
 ## Storage
 

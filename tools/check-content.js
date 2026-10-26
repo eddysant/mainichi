@@ -37,7 +37,7 @@ function roma(k){
   return out;
 }
 const src=require("fs").readFileSync(require("path").join(__dirname,"..","content.js"),"utf8");
-eval(src+";global.W=WORDS;global.KW=KATA_WORDS;global.KA=KANA;global.KT=KATAKANA;global.GROUPS=GROUPS;global.CATEGORIES=CATEGORIES;global.USAGE=USAGE");
+eval(src+";global.W=WORDS;global.KW=KATA_WORDS;global.KA=KANA;global.KT=KATAKANA;global.GROUPS=GROUPS;global.CATEGORIES=CATEGORIES;global.USAGE=USAGE;global.ROLE_SAY=ROLE_SAY");
 const bad=[], dupK=new Map(), dupE=new Map();
 W.forEach((w,i)=>{
   const r=roma(w[1]);
@@ -111,9 +111,46 @@ while((m=keyRe.exec(usageBlock))) {
   if(seenKey.has(m[1])) bad.push("duplicate usage key: "+m[1]); else seenKey.add(m[1]);
 }
 
+/* Round-three tiles. tiles.js is generated, but a generated file that nothing checks
+   is a file that can ship wrong: re-test the guarantees here, against the committed
+   artefact rather than against the tool that wrote it. The tiles must rejoin to the
+   exact sentence they came from, every role must be one the round can describe, and
+   the grammar must still hold — no puzzle may open with a particle or put two in a
+   row, because that is what a bad parse looks like. */
+let BUILD=[];
+try{ BUILD=eval(require("fs").readFileSync(require("path").join(__dirname,"..","tiles.js"),"utf8")+";BUILD") }
+catch(e){ bad.push("tiles.js missing or unreadable — run tools/make-tiles.js") }
+const roles=new Set(Object.keys(ROLE_SAY));
+const PARTROLE=new Set(["topic marker","object marker","subject marker","to / at","toward",
+  "of","with","by","question"]);
+const seenId=new Set();
+BUILD.forEach((b,i)=>{
+  const where="tiles.js #"+i+" ("+b.id+")";
+  const face=/^w/.test(b.id)?(W[+b.id.slice(1)]||[])[0]:(KW[+b.id.slice(1)]||[])[0];
+  if(!face){ bad.push(where+": id points at no word"); return; }
+  if(seenId.has(b.id)) bad.push(where+": two puzzles for the same word"); else seenId.add(b.id);
+  const sent=(USAGE[face]||[])[0];
+  if(!sent){ bad.push(where+": "+face+" has no example sentence"); return; }
+  const joined=b.tiles.map(t=>t[0]).join("")+"\u3002";
+  if(joined!==sent) bad.push(where+": tiles rejoin to "+joined+", not "+sent);
+  if(!b.en||!b.en.trim()) bad.push(where+": no English");
+  if(!b.note||!b.note.trim()) bad.push(where+": no note");
+  if(!b.pattern||!b.pattern.trim()) bad.push(where+": no pattern");
+  if(b.tiles.length<2) bad.push(where+": fewer than two tiles");
+  b.tiles.forEach((t,j)=>{
+    if(t.length!==3) bad.push(where+" tile "+j+": wrong field count");
+    if(!roles.has(t[2])) bad.push(where+" tile "+j+": role \""+t[2]+"\" is not in ROLE_SAY");
+  });
+  const isP=t=>PARTROLE.has(t[2]);
+  if(isP(b.tiles[0])) bad.push(where+": opens with a particle");
+  b.tiles.forEach((t,j)=>{ if(j&&isP(t)&&isP(b.tiles[j-1])) bad.push(where+": two particles in a row at "+j) });
+});
+
 if(bad.length){ console.log("PROBLEMS ("+bad.length+"):"); [...new Set(bad)].forEach(b=>console.log("  - "+b)); process.exit(1); }
 console.log("content OK");
 console.log("  "+W.length+" words \u2014 romaji re-derived from kana and matching, readings and meanings unique, all typeable");
 console.log("  "+KA.length+" hiragana / "+KT.length+" katakana, aligned; "+KW.length+" loanwords, all katakana");
 console.log("  "+GROUPS.length+" grouping puzzles, every answer a real category");
 console.log("  "+Object.keys(USAGE||{}).length+" example sentences \u2014 one per word, none shared, each containing its word");
+console.log("  "+BUILD.length+" round-three tile puzzles \u2014 every one rejoining to its sentence, "
+  +new Set(BUILD.map(b=>b.pattern)).size+" distinct patterns");

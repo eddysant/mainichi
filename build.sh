@@ -1,11 +1,12 @@
 #!/bin/sh
-# Builds both targets from the same three sources.
+# Builds both targets from the same sources. tiles.js is generated — run
+# tools/make-tiles.js after editing content.js.
 #   index.html  — for publishing as a Claude artifact (the host supplies <head>)
 #   docs/       — a standalone static site with offline support, served by GitHub Pages
 set -e
 cd "$(dirname "$0")"
 
-{ cat _head.html; echo '<script>'; cat content.js; echo '</script>'
+{ cat _head.html; echo '<script>'; cat content.js; cat tiles.js; echo '</script>'
   echo '<script>'; cat _game.js; echo '</script>'; } > index.html
 
 mkdir -p docs
