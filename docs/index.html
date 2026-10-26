@@ -1733,7 +1733,19 @@ const RECAP_ROUND={key:"recap",ja:"復",name:"Catch up",
   how:["Six questions, six seconds each, two answers — quick fire, not a thinking round.",
        "They are the items whose review falls soonest, never today’s new ones.",
        "It scores like any other round, and a miss only moves a word back one step rather than all the way to the start."]};
-const roundBy=k=>k==="bonus"?BONUS_ROUND:k==="recap"?RECAP_ROUND:ROUNDS.filter(r=>r.key===k)[0];
+/* Every tenth day, a look back over the ten just gone — the block you have actually
+   been living in, asked again in one sitting. No clock: the catch-up and the lightning
+   round are both speed, and a third fast round would say the only thing that matters is
+   how quickly you answer. Its points are a bonus, added to the score and not to the
+   maximum, so the tenth day can only ever be worth more than an ordinary one. */
+const FLASH_ROUND={key:"flash",ja:"回",name:"Flashback",
+  blurb:"The last ten days, all of it, in one go — for points on top.",
+  why:"Spaced repetition decides what you see by a schedule. Once every ten days this ignores the schedule and sweeps the whole block you have just lived through, due or not.",
+  how:["Ten questions across all four streams, taken from the last ten days’ new material.",
+       "No clock. Each answer shows the word in a sentence.",
+       "The points are on top of the day’s score, never part of it."]};
+const roundBy=k=>k==="bonus"?BONUS_ROUND:k==="recap"?RECAP_ROUND
+  :k==="flash"?FLASH_ROUND:ROUNDS.filter(r=>r.key===k)[0];
 
 /* ---- progress ---- */
 const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
@@ -1809,9 +1821,12 @@ function mkQ(id){
   if(seen%2===0){
     const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
     const opts=shuffle([it.en].concat(pick(it.set.filter(w=>mean(w)!==it.en),3).map(mean)));
+    /* a loanword carries no separate reading, so there is no bracket to show: the
+       old test asked whether the face WAS the reading, which left "コーヒー ()" */
+    const read=it.kana&&it.kana!==it.face?" ("+it.kana+")":"";
     return{id,q:"What does this mean?",big:it.face,sub:kanaOnly?"":it.kana,opts,answer:it.en,
       grid:false,ja:false,
-      after:it.face+(kanaOnly?"":" ("+it.kana+")")+" — "+it.en+(it.note?" · "+it.note:"")};
+      after:it.face+read+" — "+it.en+(it.note?" · "+it.note:"")};
   }
   /* A word written only in kana IS its own reading, so asking how it is read would be a
      free point. Those take the loanword direction instead: English, and you produce the
@@ -1906,7 +1921,7 @@ function renderStart(){
   const nw=newToday(), newN=nw.length;
   const qn=quizIdsFor(nw,(P.plays||0)+1).length;
   let line;
-  const nr=roundsFor(n).length+(recapDay(n)?1:0);
+  const nr=roundsFor(n).length+(recapDay(n)||flashDay(n)?1:0);
   const head=["","One round","Two rounds","Three rounds","Four rounds","Five rounds","Six rounds"][nr]
     +", "+["","half a minute","a minute","a minute and a half","two minutes",
            "two and a half minutes","three minutes"][nr]+". ";
@@ -1935,9 +1950,13 @@ function renderStart(){
     /* the catch-up sits where it will actually be played, and shows on the other six
        days too: the rhythm is easier to keep if you can see it coming */
     if(r.key==="recall")
-      row(RECAP_ROUND,recapDay(n),
-        "Every seventh day — next on day "+(n+RECAP_EVERY-n%RECAP_EVERY)+".");
+      row(RECAP_ROUND,recapDay(n)&&!flashDay(n),
+        /* only on the day it was actually due and gave way — every seventieth */
+        recapDay(n)&&flashDay(n)?"Stood down today — the flashback covers the same ground."
+          :"Every seventh day — next on day "+(n+RECAP_EVERY-n%RECAP_EVERY)+".");
   });
+  row(FLASH_ROUND,flashDay(n),
+    "Every tenth day — next on day "+(n+FLASH_EVERY-n%FLASH_EVERY)+".");
   if(bonusEarned()){
     const li=document.createElement("li");
     li.innerHTML='<span class="k">雷</span><span><b>Lightning.</b> '+esc(BONUS_ROUND.blurb)+'</span>';
@@ -1951,7 +1970,7 @@ function renderStart(){
    explainer card before it rather than dropping the player into a mechanic they have
    never seen. */
 const STEP={group:()=>r1(),recall:()=>teach(),build:()=>r3(),write:()=>r4(),listen:()=>r5(),
-  recap:()=>rQF("recap"),bonus:()=>rQF("bonus")};
+  recap:()=>rQF("recap"),flash:()=>rFlash(),bonus:()=>rQF("bonus")};
 function nextStep(){
   run.step++;
   const key=run.plan[run.step];
@@ -2076,11 +2095,26 @@ function quiz(){
   if(!run.qs.length){pip(run.step,"done");return nextStep()}
   nextQ();
 }
+/* The flashback asks the same kind of question as round two, so it runs on the same
+   screen and the same question maker. What differs is where the point lands, and that
+   the answer is followed by the word in a sentence. */
+function rFlash(){
+  const ids=flashIds(FLASH_N);
+  if(!ids.length){pip(run.step,"done");return nextStep()}
+  run.mode="flash"; run.qs=ids.map(mkQ); run.qi=0; run.flashN=ids.length;
+  nextQ();
+}
 function nextQ(){
-  if(run.qi>=run.qs.length){pip(run.step,"done");return nextStep()}
+  const flash=run.mode==="flash";
+  if(run.qi>=run.qs.length){
+    pip(run.step,"done");
+    if(flash)run.mode=null;
+    return nextStep();
+  }
   const q=run.qs[run.qi], box=$("rOpts");
   show("sc-recall"); pip(run.step,"live");
-  $("rEyebrow").textContent="Round two · recall "+(run.qi+1)+" of "+run.qs.length;
+  $("rEyebrow").textContent=(flash?"Flashback · ":"Round two · recall ")
+    +(run.qi+1)+" of "+run.qs.length;
   $("rQ").textContent=q.q;
   $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"")+(q.gloss?" gloss":"");
   $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
@@ -2100,10 +2134,18 @@ function nextQ(){
         else if(x===b)x.classList.add("wrong");
         else x.classList.add("dim");
       });
-      if(ok)run.r2++;
+      if(ok)flash?run.flashGot++:run.r2++;
+      /* No clock here, so a miss is a real one and grades like any other. */
       if(run.scored)grade(q.id,ok);
       $("rNote").className="note "+(ok?"good":"bad");
       $("rNote").textContent=q.after;
+      /* The whole point of a look back is seeing the word do its job again. */
+      const ex=flash?usageFor(item(q.id)):null;
+      if(ex){
+        const d=document.createElement("span");
+        d.className="ja"; d.textContent=" "+ex[0];
+        $("rNote").appendChild(d);
+      }
       setTimeout(()=>{run.qi++;nextQ()},ok?750:1900);
     };
     box.appendChild(b);
@@ -2487,6 +2529,23 @@ function recapIds(n){
    they ask about, how long you get, and where the points land. `extra` is the
    difference that matters — bonus points are added to the score but not to the
    maximum, while the catch-up counts like any other round, in both. */
+const FLASH_EVERY=10, FLASH_N=10, FLASH_BLOCK=10;
+const flashDay=day=>day%FLASH_EVERY===0;
+/* The last ten days of new material: per stream, the ten highest indices introduced,
+   since each day introduces the lowest one not yet seen. Interleaved across the streams
+   rather than taken in order, so the round is the block and not its tail. */
+function flashIds(n){
+  const take=[];
+  SCRIPTS.forEach(([pre])=>{
+    const idx=Object.keys(P.srs).filter(id=>id[0]===pre).map(id=>+id.slice(1))
+      .sort((a,b)=>b-a).slice(0,FLASH_BLOCK);
+    take.push(shuffle(idx.map(i=>pre+i)));
+  });
+  const out=[];
+  for(let r=0;r<FLASH_BLOCK&&out.length<n;r++)
+    take.forEach(list=>{ if(list[r]&&out.length<n)out.push(list[r]); });
+  return shuffle(out);
+}
 const QF={
   bonus:{n:8,ms:4000,extra:true,ids:bonusIds,ja:"雷",label:"Bonus round",
     eyebrow:"Bonus round · lightning",lead:"Three strong days running",
@@ -2606,8 +2665,11 @@ function endQF(){
 /* ---- finish ---- */
 async function finish(){
   const base=run.r1+run.r2+run.r3+(run.r4||0)+(run.r5||0)+(run.r6||0);
+  /* Both extras are points on top: the lightning round earned by three strong days,
+     and the tenth-day flashback. Neither touches the maximum. */
   const r={date:today(),lesson:run.lesson,
-           score:base,bonus:run.bonus||0,
+           score:base,bonus:(run.bonus||0)+(run.flashGot||0),
+           flashGot:run.flashGot||0,flashN:run.flashN||0,
            max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0)+(run.r6max||0),
            gIdx:run.gIdx,sIdx:run.sIdx,newIds:run.newIds,dueIds:run.dueIds,
            wIds:run.wIds||[],lIds:run.lIds||[],cIds:run.cIds||[],
@@ -2653,9 +2715,11 @@ function renderDone(r,scored){
   if(scored&&r.freezeGot) fl=" <b>Freeze earned</b> — "+r.freezeHeld
     +(r.freezeHeld===1?" in hand.":" in hand, "+FREEZE_MAX+" is the most you can hold.");
   else if(scored&&r.freezeAtCap) fl=" A freeze was due, but you are holding the maximum of "+FREEZE_MAX+".";
+  const fb=r.flashN?" <b>Flashback</b> — "+r.flashGot+" of "+r.flashN
+    +" from the last ten days, added on top.":"";
   $("dStreak").innerHTML=scored
-    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."+fl
-    : "Streak and review schedule left untouched.";
+    ? "<b>"+P.streak+(P.streak===1?" day":" days")+" in a row.</b> Best so far: "+P.best+"."+fl+fb
+    : "Streak and review schedule left untouched."+fb;
   const g=GROUPS[r.gIdx];
   $("dGroupH").textContent="The thread — "+g.answer;
   rowsInto($("dGroupRows"),g.clues.map(c=>[c[0],esc(c[2])+" <i>"+esc(c[1])+"</i>"]));
@@ -2695,7 +2759,8 @@ function renderDone(r,scored){
   $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
   setupReminder();
   $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow."
-    +(recapDay(P.lesson+1)?" A catch-up round comes round with it.":"")
+    +(flashDay(P.lesson+1)?" A flashback over the last ten days comes with it."
+      :recapDay(P.lesson+1)?" A catch-up round comes round with it.":"")
     +(scored&&r.bonusNext?" Three strong days — a lightning round waits.":"");
 }
 
@@ -2769,11 +2834,16 @@ function startRun(scored){
   const plan=roundsFor(l+1).map(r=>r.key);
   /* straight after recall, where it reads as a continuation of it rather than a
      fourth thing to get through */
-  if(recapDay(l+1))plan.splice(plan.indexOf("recall")+1,0,"recap");
+  /* On the seventieth day and every seventieth after, both review rounds fall due. The
+     flashback is the larger and covers the same ground, so it stands in for the catch-up
+     rather than stacking on top of it. */
+  if(recapDay(l+1)&&!flashDay(l+1))plan.splice(plan.indexOf("recall")+1,0,"recap");
+  if(flashDay(l+1))plan.push("flash");
   if(scored&&bonusEarned())plan.push("bonus");
   run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sIdx:l%SENTENCES.length,
        newIds:nw,dueIds:[],plan,step:-1,
-       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,r6:0,r6max:0,cIds:[],bonus:0,qs:[],qi:0};
+       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,r6:0,r6max:0,cIds:[],
+       bonus:0,flashGot:0,flashN:0,mode:null,qs:[],qi:0};
   buildPips(plan.length);
   $("pips").hidden=false;
   nextStep();

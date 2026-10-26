@@ -1,5 +1,5 @@
 /* Offline shell for Mainichi. CACHE is stamped by build.sh, so a rebuild retires the old one. */
-const CACHE = "mainichi-20261025224845";
+const CACHE = "mainichi-20261025230332";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg",
               "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 

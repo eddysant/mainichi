@@ -40,6 +40,17 @@ Each unlock gets a card explaining the mechanic the first time it appears, and t
 screen lists the locked rounds with the day they open — the thing you are building
 towards is visible from day one.
 
+**Every tenth day there is a flashback**, at the end of the run: ten questions across
+all four streams, drawn from the last ten days’ new material rather than from the review
+schedule. It sweeps the block you have just lived through whether it was due or not. No
+clock — the catch-up and the lightning round are both speed, and a third fast round
+would say the only thing that matters is answering quickly. Each answer shows the word
+in a sentence. Its points are added to the score but *not* to the maximum, so a tenth
+day can only ever be worth more than an ordinary one.
+
+Every seventieth day both review rounds fall due at once. The flashback covers the same
+ground and is the larger of the two, so the catch-up stands down rather than stacking.
+
 There is also a **lightning round**, earned rather than unlocked: score 85% or better
 three days running and it appears at the end of the next run. Eight questions, two
 options, four seconds each. Its points are added to the score but *not* to the maximum,
