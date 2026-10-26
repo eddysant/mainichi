@@ -228,6 +228,11 @@ h2{font-size:1.125rem;line-height:1.35}
 .bonus-tally i.hit{background:var(--zing);border-color:var(--ink)}
 .bonus-tally i.miss{background:var(--no-soft);border-color:var(--no)}
 
+/* an example sentence: the word doing its job, which a gloss cannot show */
+.note.ex{border-left:2px solid var(--rule-s);padding-left:.7rem}
+.note.ex .ja{display:block;font-family:var(--ja);font-size:1.0625rem;line-height:1.6;color:var(--ink)}
+.row .l.ja-ex{font-family:var(--ja);font-size:1rem;line-height:1.5;max-width:11rem}
+
 /* daily reminder */
 .remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
 .remind-row input[type=time]{font:inherit;font-size:1rem;padding:.6rem .7rem;border:1px solid var(--line);
@@ -312,6 +317,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div class="lat" id="tLat">mizu</div>
     </div>
     <p class="note" id="tEn"><b>water</b></p>
+    <p class="note ex" id="tEx" hidden></p>
     <button class="btn" id="tNext">Got it</button>
   </section>
 
@@ -387,6 +393,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="recap">
       <div><h3 id="dGroupH">The thread</h3><div class="rows" id="dGroupRows"></div></div>
       <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
+      <div id="dUseBlock" hidden><h3>In use</h3><div class="rows" id="dUseRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
       <div id="dWroteBlock" hidden><h3>Written and heard</h3><div class="rows" id="dWroteRows"></div></div>
       <div id="dCatchBlock" hidden><h3>Caught up</h3><div class="rows" id="dCatchRows"></div></div>

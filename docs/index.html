@@ -253,6 +253,11 @@ h2{font-size:1.125rem;line-height:1.35}
 .bonus-tally i.hit{background:var(--zing);border-color:var(--ink)}
 .bonus-tally i.miss{background:var(--no-soft);border-color:var(--no)}
 
+/* an example sentence: the word doing its job, which a gloss cannot show */
+.note.ex{border-left:2px solid var(--rule-s);padding-left:.7rem}
+.note.ex .ja{display:block;font-family:var(--ja);font-size:1.0625rem;line-height:1.6;color:var(--ink)}
+.row .l.ja-ex{font-family:var(--ja);font-size:1rem;line-height:1.5;max-width:11rem}
+
 /* daily reminder */
 .remind-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
 .remind-row input[type=time]{font:inherit;font-size:1rem;padding:.6rem .7rem;border:1px solid var(--line);
@@ -337,6 +342,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div class="lat" id="tLat">mizu</div>
     </div>
     <p class="note" id="tEn"><b>water</b></p>
+    <p class="note ex" id="tEx" hidden></p>
     <button class="btn" id="tNext">Got it</button>
   </section>
 
@@ -412,6 +418,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="recap">
       <div><h3 id="dGroupH">The thread</h3><div class="rows" id="dGroupRows"></div></div>
       <div><h3>New today</h3><div class="rows" id="dNewRows"></div></div>
+      <div id="dUseBlock" hidden><h3>In use</h3><div class="rows" id="dUseRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
       <div id="dWroteBlock" hidden><h3>Written and heard</h3><div class="rows" id="dWroteRows"></div></div>
       <div id="dCatchBlock" hidden><h3>Caught up</h3><div class="rows" id="dCatchRows"></div></div>
@@ -964,6 +971,119 @@ const WORDS = [
   ["それから","それから","sorekara","and then"]
 ];
 
+/* One short sentence per word, for the words met first and the ones whose English
+   gloss misleads on its own. A gloss teaches what a word points at; only a sentence
+   teaches what it does — 好き takes が, not を, and no English equivalent will ever say so.
+   Written in kana, like the round-three tiles, because the reading is the part being
+   learned. Keyed by the word as WORDS writes it; tools/check-content.js checks every
+   key exists and that the sentence really contains that word's reading. */
+const USAGE = {
+  "水":["みずをのみます。","I drink water."],
+  "猫":["ねこがいます。","There is a cat."],
+  "犬":["いぬはちいさいです。","The dog is small."],
+  "本":["ほんをよみます。","I read a book."],
+  "山":["やまはたかいです。","The mountain is high."],
+  "川":["かわでおよぎます。","I swim in the river."],
+  "人":["あのひとはせんせいです。","That person is a teacher."],
+  "空":["そらはあおいです。","The sky is blue."],
+  "海":["うみへいきます。","I’m going to the sea."],
+  "雨":["あめがふっています。","It’s raining."],
+  "雪":["ゆきがふります。","It snows."],
+  "風":["かぜがつよいです。","The wind is strong."],
+  "花":["はながきれいです。","The flowers are pretty."],
+  "魚":["さかなをたべます。","I eat fish."],
+  "鳥":["とりがいます。","There is a bird."],
+  "馬":["うまははしります。","The horse runs."],
+  "木":["きはおおきいです。","The tree is big."],
+  "月":["つきがきれいです。","The moon is beautiful."],
+  "車":["くるまでいきます。","I’ll go by car."],
+  "家":["いえにかえります。","I go home."],
+  "駅":["えきはどこですか。","Where is the station?"],
+  "町":["このまちはしずかです。","This town is quiet."],
+  "店":["みせはあたらしいです。","The shop is new."],
+  "道":["みちをあるきます。","I walk along the road."],
+  "学校":["がっこうへいきます。","I go to school."],
+  "大学":["だいがくのがくせいです。","I’m a university student."],
+  "先生":["せんせいにききます。","I’ll ask the teacher."],
+  "学生":["わたしはがくせいです。","I am a student."],
+  "友達":["ともだちとはなします。","I talk with a friend."],
+  "名前":["なまえはなんですか。","What is your name?"],
+  "母":["ははにてがみをかきます。","I write a letter to my mother."],
+  "父":["ちちはいしゃです。","My father is a doctor."],
+  "姉":["あねはやさしいです。","My older sister is kind."],
+  "兄":["あにはがくせいです。","My older brother is a student."],
+  "妹":["いもうとはちいさいです。","My younger sister is small."],
+  "弟":["おとうとはげんきです。","My younger brother is full of energy."],
+  "手":["てをあらいます。","I wash my hands."],
+  "足":["あしがいたいです。","My leg hurts."],
+  "目":["めでみます。","You see with your eyes."],
+  "耳":["みみでききます。","You hear with your ears."],
+  "口":["くちをあけます。","I open my mouth."],
+  "頭":["あたまがいたいです。","I have a headache."],
+  "白":["しろいくるまです。","It’s a white car."],
+  "黒":["くろいかばんです。","It’s a black bag."],
+  "赤":["あかいはながすきです。","I like red flowers."],
+  "青":["あおいうみです。","It’s a blue sea."],
+  "今":["いまなんじですか。","What time is it now?"],
+  "今日":["きょうはさむいです。","It’s cold today."],
+  "明日":["あしたがっこうへいきます。","I’ll go to school tomorrow."],
+  "昨日":["きのうえいがをみました。","I watched a film yesterday."],
+  "毎日":["まいにちにほんごをべんきょうします。","I study Japanese every day."],
+  "時間":["じかんがありません。","I haven’t got time."],
+  "何":["これはなんですか。","What is this?"],
+  "誰":["あのひとはだれですか。","Who is that person?"],
+  "ご飯":["ごはんをたべました。","I ate a meal."],
+  "肉":["にくをたべません。","I don’t eat meat."],
+  "野菜":["やさいをかいます。","I buy vegetables."],
+  "お茶":["おちゃがすきです。","I like tea."],
+  "電車":["でんしゃでいきます。","I’ll go by train."],
+  "食べる":["あさごはんをたべます。","I eat breakfast."],
+  "飲む":["コーヒーをのみます。","I drink coffee."],
+  "行く":["としょかんへいきます。","I go to the library."],
+  "来る":["ともだちがきます。","A friend is coming. — くる is irregular: it becomes きます."],
+  "見る":["テレビをみます。","I watch television."],
+  "読む":["しんぶんをよみます。","I read the newspaper."],
+  "書く":["なまえをかきます。","I write my name."],
+  "聞く":["おんがくをききます。","I listen to music."],
+  "話す":["にほんごをはなします。","I speak Japanese."],
+  "買う":["パンをかいます。","I buy bread."],
+  "大きい":["このいぬはおおきいです。","This dog is big."],
+  "小さい":["ちいさいねこです。","It’s a small cat."],
+  "高い":["このほんはたかいです。","This book is expensive."],
+  "安い":["あのみせはやすいです。","That shop is cheap."],
+  "新しい":["あたらしいくるまをかいました。","I bought a new car."],
+  "古い":["このいえはふるいです。","This house is old."],
+  "長い":["ながいかわです。","It’s a long river."],
+  "早い":["きょうははやくおきました。","I got up early today."],
+  "春":["はるははながきれいです。","In spring the flowers are pretty."],
+  "夏":["なつはあついです。","Summer is hot."],
+  "秋":["あきはすずしいです。","Autumn is cool."],
+  "冬":["ふゆはゆきがふります。","In winter it snows."],
+  "病院":["びょういんへいきます。","I’m going to the hospital."],
+  "銀行":["ぎんこうはえきのまえです。","The bank is in front of the station."],
+  "図書館":["としょかんでほんをよみます。","I read books at the library."],
+  "会社":["かいしゃではたらきます。","I work at a company."],
+  "公園":["こうえんをあるきます。","I walk in the park."],
+  "空港":["くうこうはとおいです。","The airport is far."],
+  "部屋":["へやはきれいです。","The room is clean."],
+  "台所":["だいどころでりょうりをします。","I cook in the kitchen."],
+  "庭":["にわにはながあります。","There are flowers in the garden."],
+  /* the ones whose English gloss is actively misleading on its own */
+  "好き":["ねこがすきです。","I like cats. — what you like takes が, never を."],
+  "嫌い":["やさいがきらいです。","I dislike vegetables. — が again, not を."],
+  "大丈夫":["だいじょうぶですか。","Are you all right? — also means “no thanks, I’m fine”."],
+  "上手":["あねはりょうりがじょうずです。","My sister is good at cooking. — never used of yourself."],
+  "下手":["わたしはうたがへたです。","I’m bad at singing."],
+  "すぐ":["すぐいきます。","I’ll go right away."],
+  "ちょっと":["ちょっとまってください。","Wait a moment, please. — also softens a refusal."],
+  "あまり":["あまりたべません。","I don’t eat much. — あまり needs a negative verb after it."],
+  "もう":["もうたべました。","I’ve already eaten."],
+  "まだ":["まだです。","Not yet."],
+  "とても":["とてもおいしいです。","It’s very good."],
+  "元気":["おげんきですか。","How are you? — literally “are you full of energy?”"],
+  "一緒に":["いっしょにいきましょう。","Let’s go together."]
+};
+
 /* What each particle actually does — used verbatim when a tile is placed wrong,
    so a mistake explains itself instead of just bouncing back. */
 const PARTICLES = {
@@ -1192,6 +1312,7 @@ const wordItem=i=>({id:"w"+i,type:"kanjiword",script:"kanji",set:WORDS,
   face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3],note:""});
 const loanItem=i=>({id:"v"+i,type:"loanword",script:"katakana word",set:KATA_WORDS,
   face:KATA_WORDS[i][0],kana:"",romaji:KATA_WORDS[i][1],en:KATA_WORDS[i][2],note:KATA_WORDS[i][3]||""});
+const usageFor=it=>(typeof USAGE==="object"&&USAGE[it.face])||null;
 const item=id=>{const n=+id.slice(1);
   return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):id[0]==="v"?loanItem(n):wordItem(n)};
 /* The lowest item of each script not yet introduced, rather than the one at the
@@ -1208,7 +1329,11 @@ function newToday(){
    Rounds four and five exist from the start but stay shut until the habit is there.
    Both fill a real gap: everything in rounds one to three is four-option recognition,
    so a day can be passed without ever retrieving anything cold or hearing a word said.
-   `day` is the day number they appear on, counting from one. */
+   Two ways in, whichever comes first. `streak` is the real test — a 14-day run is the
+   habit demonstrated, where a day number only measures persistence — and it is checked
+   against the BEST streak, not the current one: a round earned by two weeks of showing
+   up should not slam shut again on the first day missed. `day` stays as the slow road
+   for someone who plays often but keeps breaking the run. */
 const ROUNDS=[
   {key:"group", day:1,  ja:"一", name:"Find the thread",
    blurb:"Five words appear one at a time — say what they share."},
@@ -1216,20 +1341,28 @@ const ROUNDS=[
    blurb:"Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due."},
   {key:"build", day:1,  ja:"三", name:"Build a sentence",
    blurb:"Tap the words into order."},
-  {key:"write", day:50, ja:"四", name:"Write it from memory",
+  {key:"write", day:50, streak:14, ja:"四", name:"Write it from memory",
    blurb:"Spell a word you know on a kana keyboard — no options to choose from.",
    why:"Fifty days of picking the right answer out of four is recognition. This asks you to produce the word with nothing to recognise.",
    how:["Tap a consonant row, then a vowel — the gojuon grid, two taps per kana.",
         "゙ and ゚ add the marks; 小 shrinks the last kana to っ or ゃ.",
         "A wrong kana is refused where you tap it, so you never fill in a whole wrong word."]},
-  {key:"listen",day:75, ja:"五", name:"Hear it",
+  {key:"listen",day:75, streak:21, ja:"五", name:"Hear it",
    blurb:"Pick the word you heard, from words that sound alike.",
    why:"Everything so far has been silent. The hardest part of Japanese on the day you need it is catching a word said at speed.",
    how:["Tap to hear it, as many times as you like.",
         "The wrong answers are chosen for sounding close to the right one.",
         "Needs a Japanese voice on the device; the round is skipped if there is none."]}
 ];
-const roundsFor=day=>ROUNDS.filter(r=>day>=r.day);
+const open=(r,day)=>day>=r.day||(P.best||0)>=r.streak;
+const roundsFor=day=>ROUNDS.filter(r=>open(r,day));
+/* What a locked row says. Naming both doors, and the distance to the nearer one, is
+   the difference between a round that feels withheld and one that feels earned. */
+function lockSay(r,day){
+  const best=P.best||0, togo=r.streak-best;
+  return "Opens at a "+r.streak+"-day streak, or on day "+r.day+"."
+    +(best?" Your best is "+best+" — "+togo+(togo===1?" more day.":" more days."):"");
+}
 const BONUS_ROUND={key:"bonus",ja:"雷",name:"Lightning",
   blurb:"Eight questions, four seconds each, points on top."};
 /* Every seventh day, between recall and the sentence. Not day-gated like the rounds
@@ -1439,7 +1572,7 @@ function renderStart(){
     ul.appendChild(li);
   };
   ROUNDS.forEach(r=>{
-    row(r,n>=r.day,"Unlocks on day "+r.day+".");
+    row(r,open(r,n),lockSay(r,n));
     /* the catch-up sits where it will actually be played, and shows on the other six
        days too: the rhythm is easier to keep if you can see it coming */
     if(r.key==="recall")
@@ -1550,6 +1683,12 @@ function teach(){
     $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
     $("tLat").textContent=it.romaji;
     $("tEn").innerHTML="<b>"+esc(it.en)+"</b>"+(it.note?" · "+esc(it.note):"");
+    /* First contact is the moment an example is worth most: the gloss says what the
+       word points at, the sentence says what it does. Only the word streams have them,
+       and only where one is written — no placeholder when there is none. */
+    const ex=usageFor(it);
+    $("tEx").hidden=!ex;
+    if(ex)$("tEx").innerHTML='<span class="ja">'+esc(ex[0])+'</span>'+esc(ex[1]);
     $("tNext").textContent=i<ids.length-1?"Next":"Try it";
     $("tNext").onclick=()=>{i++;one()};
   })();
@@ -2165,6 +2304,10 @@ function renderDone(r,scored){
     const it=item(id);
     return [it.face,esc(it.en)+" <i>"+esc(it.kana?it.kana+" · "+it.romaji:it.romaji)+"</i>"];
   }));
+  const used=(r.newIds||[]).map(id=>[item(id),usageFor(item(id))]).filter(x=>x[1]);
+  $("dUseBlock").hidden=!used.length;
+  rowsInto($("dUseRows"),used.map(([it,ex])=>[ex[0],esc(ex[1])]));
+  [...$("dUseRows").children].forEach(d=>d.querySelector(".l").classList.add("ja-ex"));
   const practised=(r.newIds||[]).concat(r.dueIds||[]);
   rowsInto($("dDueRows"),practised.map(id=>{
     const it=item(id), s=P.srs[id];

@@ -37,7 +37,7 @@ function roma(k){
   return out;
 }
 const src=require("fs").readFileSync(require("path").join(__dirname,"..","content.js"),"utf8");
-eval(src+";global.W=WORDS;global.KW=KATA_WORDS;global.KA=KANA;global.KT=KATAKANA;global.GROUPS=GROUPS;global.CATEGORIES=CATEGORIES");
+eval(src+";global.W=WORDS;global.KW=KATA_WORDS;global.KA=KANA;global.KT=KATAKANA;global.GROUPS=GROUPS;global.CATEGORIES=CATEGORIES;global.USAGE=USAGE");
 const bad=[], dupK=new Map(), dupE=new Map();
 W.forEach((w,i)=>{
   const r=roma(w[1]);
@@ -75,8 +75,35 @@ const MARKED="がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴ
 const reach=new Set((ROWS+MARKED).split(""));
 W.forEach(w=>{ for(const c of w[1]) if(!reach.has(c)) bad.push(w[0]+" ("+w[1]+") needs "+c+", which the keyboard cannot make"); });
 
+/* Example sentences: the key must be a real word, and the sentence must actually
+   contain it. A conjugated verb will not contain its dictionary form — たべる appears as
+   たべます — so the stem counts too, which is loose enough to pass a real inflection and
+   still catch a sentence pasted against the wrong word. Duplicate keys are counted in
+   the source, because the object literal would silently swallow them. */
+const byFace=new Map(W.map(w=>[w[0],w]));
+Object.keys(USAGE||{}).forEach(k=>{
+  const w=byFace.get(k);
+  if(!w){ bad.push("usage key is not a word: "+k); return; }
+  const [ja,en]=USAGE[k];
+  const kana=w[1], stem=kana.length>1?kana.slice(0,-1):kana;
+  /* the two irregular verbs change their stem outright: くる → きます, する → します */
+  const IRREG={"来る":["き","こ"],"する":["し"]};
+  const forms=[kana,stem].concat(IRREG[k]||[]);
+  if(!forms.some(f=>ja.indexOf(f)>=0))
+    bad.push("usage for "+k+" does not contain "+kana+": "+ja);
+  if(!/\u3002$/.test(ja)) bad.push("usage for "+k+" does not end in \u3002");
+  if(!en||!en.trim()) bad.push("usage for "+k+" has no English");
+});
+const keyRe=/^\s*"([^"]+)":\s*\[/gm;
+const usageBlock=src.slice(src.indexOf("const USAGE"),src.indexOf("const PARTICLES"));
+const seenKey=new Set(); let m;
+while((m=keyRe.exec(usageBlock))) {
+  if(seenKey.has(m[1])) bad.push("duplicate usage key: "+m[1]); else seenKey.add(m[1]);
+}
+
 if(bad.length){ console.log("PROBLEMS ("+bad.length+"):"); [...new Set(bad)].forEach(b=>console.log("  - "+b)); process.exit(1); }
 console.log("content OK");
 console.log("  "+W.length+" words \u2014 romaji re-derived from kana and matching, readings and meanings unique, all typeable");
 console.log("  "+KA.length+" hiragana / "+KT.length+" katakana, aligned; "+KW.length+" loanwords, all katakana");
 console.log("  "+GROUPS.length+" grouping puzzles, every answer a real category");
+console.log("  "+Object.keys(USAGE||{}).length+" example sentences, each containing its word");

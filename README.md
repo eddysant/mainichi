@@ -22,12 +22,16 @@ round, and because the clock is the hard part a miss only moves a word back one 
 rather than all the way to the start.
 
 Two more rounds are written but stay shut until the habit is there, because they are
-harder and would be a reason to quit on day three:
+harder and would be a reason to quit on day three. They open at a **streak**, with a day
+number as the slow road in — whichever comes first. A fourteen-day run is the habit
+demonstrated; a day number only measures persistence. The streak checked is the *best*
+one, never the current one: a round earned by two weeks of showing up should not slam
+shut again on the first day missed.
 
-4. **Write it from memory** (day 50) — spell a word you know on a two-tap gojūon kana
+4. **Write it from memory** (14-day streak, or day 50) — spell a word you know on a two-tap gojūon kana
    keyboard. No options. A wrong kana is refused where you tap it, and a wrong mark on
    the right shape says so; after three slips it shows you the next kana and scores zero.
-5. **Hear it** (day 75) — the word is spoken by the device's Japanese voice and you pick
+5. **Hear it** (21-day streak, or day 75) — the word is spoken by the device's Japanese voice and you pick
    it from words chosen for sounding close. No audio to host and it works offline; if
    the device has no Japanese voice the round is skipped and the card says so, rather
    than playing silence.
@@ -71,11 +75,19 @@ The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 387 wor
 25 sentences and 28 grouping puzzles — 387 days of new material before it becomes
 review-only.
 
+**Example sentences.** 103 of the words carry one: the words met first, and the ones
+whose English gloss misleads on its own. A gloss says what a word points at; only a
+sentence says what it does — 好き takes が and not を, and no English equivalent will ever
+tell you that. They appear twice: on the card where the word is first met, and again on
+the day’s done card, which is read without a clock running.
+
 `tools/check-content.js` validates the whole set: every word's romaji is re-derived from
 its kana and compared, readings and meanings must be unique (two words sharing a reading
 would make a listening question unanswerable), every reading must be typeable on the
-round-four keyboard, and every grouping answer must exist as a selectable category. Run
-it after touching `content.js`.
+round-four keyboard, every grouping answer must exist as a selectable category, and
+every example sentence must contain the word it illustrates — its stem counts, since a
+conjugated verb never contains its dictionary form, and 来る and する are named outright
+because they change stem completely. Run it after touching `content.js`.
 
 ## Streak freezes
 

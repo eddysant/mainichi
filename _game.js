@@ -36,6 +36,7 @@ const wordItem=i=>({id:"w"+i,type:"kanjiword",script:"kanji",set:WORDS,
   face:WORDS[i][0],kana:WORDS[i][1],romaji:WORDS[i][2],en:WORDS[i][3],note:""});
 const loanItem=i=>({id:"v"+i,type:"loanword",script:"katakana word",set:KATA_WORDS,
   face:KATA_WORDS[i][0],kana:"",romaji:KATA_WORDS[i][1],en:KATA_WORDS[i][2],note:KATA_WORDS[i][3]||""});
+const usageFor=it=>(typeof USAGE==="object"&&USAGE[it.face])||null;
 const item=id=>{const n=+id.slice(1);
   return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):id[0]==="v"?loanItem(n):wordItem(n)};
 /* The lowest item of each script not yet introduced, rather than the one at the
@@ -52,7 +53,11 @@ function newToday(){
    Rounds four and five exist from the start but stay shut until the habit is there.
    Both fill a real gap: everything in rounds one to three is four-option recognition,
    so a day can be passed without ever retrieving anything cold or hearing a word said.
-   `day` is the day number they appear on, counting from one. */
+   Two ways in, whichever comes first. `streak` is the real test — a 14-day run is the
+   habit demonstrated, where a day number only measures persistence — and it is checked
+   against the BEST streak, not the current one: a round earned by two weeks of showing
+   up should not slam shut again on the first day missed. `day` stays as the slow road
+   for someone who plays often but keeps breaking the run. */
 const ROUNDS=[
   {key:"group", day:1,  ja:"一", name:"Find the thread",
    blurb:"Five words appear one at a time — say what they share."},
@@ -60,20 +65,28 @@ const ROUNDS=[
    blurb:"Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due."},
   {key:"build", day:1,  ja:"三", name:"Build a sentence",
    blurb:"Tap the words into order."},
-  {key:"write", day:50, ja:"四", name:"Write it from memory",
+  {key:"write", day:50, streak:14, ja:"四", name:"Write it from memory",
    blurb:"Spell a word you know on a kana keyboard — no options to choose from.",
    why:"Fifty days of picking the right answer out of four is recognition. This asks you to produce the word with nothing to recognise.",
    how:["Tap a consonant row, then a vowel — the gojuon grid, two taps per kana.",
         "゙ and ゚ add the marks; 小 shrinks the last kana to っ or ゃ.",
         "A wrong kana is refused where you tap it, so you never fill in a whole wrong word."]},
-  {key:"listen",day:75, ja:"五", name:"Hear it",
+  {key:"listen",day:75, streak:21, ja:"五", name:"Hear it",
    blurb:"Pick the word you heard, from words that sound alike.",
    why:"Everything so far has been silent. The hardest part of Japanese on the day you need it is catching a word said at speed.",
    how:["Tap to hear it, as many times as you like.",
         "The wrong answers are chosen for sounding close to the right one.",
         "Needs a Japanese voice on the device; the round is skipped if there is none."]}
 ];
-const roundsFor=day=>ROUNDS.filter(r=>day>=r.day);
+const open=(r,day)=>day>=r.day||(P.best||0)>=r.streak;
+const roundsFor=day=>ROUNDS.filter(r=>open(r,day));
+/* What a locked row says. Naming both doors, and the distance to the nearer one, is
+   the difference between a round that feels withheld and one that feels earned. */
+function lockSay(r,day){
+  const best=P.best||0, togo=r.streak-best;
+  return "Opens at a "+r.streak+"-day streak, or on day "+r.day+"."
+    +(best?" Your best is "+best+" — "+togo+(togo===1?" more day.":" more days."):"");
+}
 const BONUS_ROUND={key:"bonus",ja:"雷",name:"Lightning",
   blurb:"Eight questions, four seconds each, points on top."};
 /* Every seventh day, between recall and the sentence. Not day-gated like the rounds
@@ -283,7 +296,7 @@ function renderStart(){
     ul.appendChild(li);
   };
   ROUNDS.forEach(r=>{
-    row(r,n>=r.day,"Unlocks on day "+r.day+".");
+    row(r,open(r,n),lockSay(r,n));
     /* the catch-up sits where it will actually be played, and shows on the other six
        days too: the rhythm is easier to keep if you can see it coming */
     if(r.key==="recall")
@@ -394,6 +407,12 @@ function teach(){
     $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
     $("tLat").textContent=it.romaji;
     $("tEn").innerHTML="<b>"+esc(it.en)+"</b>"+(it.note?" · "+esc(it.note):"");
+    /* First contact is the moment an example is worth most: the gloss says what the
+       word points at, the sentence says what it does. Only the word streams have them,
+       and only where one is written — no placeholder when there is none. */
+    const ex=usageFor(it);
+    $("tEx").hidden=!ex;
+    if(ex)$("tEx").innerHTML='<span class="ja">'+esc(ex[0])+'</span>'+esc(ex[1]);
     $("tNext").textContent=i<ids.length-1?"Next":"Try it";
     $("tNext").onclick=()=>{i++;one()};
   })();
@@ -1009,6 +1028,10 @@ function renderDone(r,scored){
     const it=item(id);
     return [it.face,esc(it.en)+" <i>"+esc(it.kana?it.kana+" · "+it.romaji:it.romaji)+"</i>"];
   }));
+  const used=(r.newIds||[]).map(id=>[item(id),usageFor(item(id))]).filter(x=>x[1]);
+  $("dUseBlock").hidden=!used.length;
+  rowsInto($("dUseRows"),used.map(([it,ex])=>[ex[0],esc(ex[1])]));
+  [...$("dUseRows").children].forEach(d=>d.querySelector(".l").classList.add("ja-ex"));
   const practised=(r.newIds||[]).concat(r.dueIds||[]);
   rowsInto($("dDueRows"),practised.map(id=>{
     const it=item(id), s=P.srs[id];
