@@ -14,7 +14,7 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
 3. **Build the sentence** — tap the words into order. The tiles show only Japanese; the
    English appears on a wrong tap, where the teaching already happens. The first 25 days use the
    hand-written sentences in order, because they are a grammar syllabus: は before を
-   before へ, each one introducing the next piece. After that the round draws on 389
+   before へ, each one introducing the next piece. After that the round draws on 447
    puzzles generated from the example sentences, so it only ever asks you to build a
    sentence out of a word you have already met — and met on an earlier day, not this
    morning, which makes the round consolidation rather than a preview. Played puzzles
@@ -118,11 +118,11 @@ than skipping to wherever the learner had got to.
 Hiragana has no word stream of its own because it already has one: the kanji words are
 drilled in both directions, and the reading direction is hiragana.
 
-The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 387 words,
-25 hand-written sentences, 389 generated sentence puzzles and 28 grouping puzzles —
-387 days of new material before it becomes review-only.
+The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 409 words,
+25 hand-written sentences, 447 generated sentence puzzles and 28 grouping puzzles —
+409 days of new material before it becomes review-only.
 
-**Example sentences.** Every word carries one — all 387 words and all 75 loanwords, 462
+**Example sentences.** Every word carries one — all 409 words and all 75 loanwords, 484
 in total, with no two sharing a sentence. A gloss says what a word points at; only a
 sentence says what it does — 好き takes が and not を, a hat is かぶる but trousers are はく,
 medicine is drunk, and no English equivalent will ever tell you that. 49 of them carry
@@ -183,12 +183,19 @@ Part of speech comes free from the glosses: every verb and only a verb is glosse
 "to ...", and an い-adjective is the one written with its い in the kanji face, which
 先生 is not.
 
-389 of the 462 sentences earn a puzzle. The 73 rejects are listed by
-`node tools/make-tiles.js -v`, and they are a to-do list rather than a bug: nearly all
-of them now need a word the curriculum does not teach — そらはあおいです needs 青い and
-the set has only 青; others need 降る, つける, かぶる, 取る — so the fix is to the
-vocabulary, not to the parser. Three are two sentences joined by だから, でも or それから,
-which would need a tile for the full stop between them.
+447 of the 484 sentences earn a puzzle. The 37 rejects are listed by
+`node tools/make-tiles.js -v`. The bulk of the earlier 73 were a vocabulary gap rather
+than a parser fault — そらはあおいです needs 青い and the set had only 青 — and the words
+have since been added. What is left is mostly 形 and どんな, which stand in front of a
+noun and would need licensing the way a pointer does; three are two sentences joined by
+だから, でも or それから, which would need a tile for the full stop between them; and three
+come out as a single tile, with no order left to get right.
+
+**Where a new word goes.** Not at the end, and not next to a relative: a word is
+inserted immediately before the earliest existing word whose sentence uses it, so it is
+always taught before it is shown. Anchoring by topic instead put 浴びる on day 2 and
+調べる on day 6, ahead of 猫 and 本. Inserting mid-curriculum is only safe at all because
+an item's id is its face rather than its position — see below.
 
 `tools/check-content.js` re-tests all of it against the committed `tiles.js` rather
 than trusting the tool that wrote it: the tiles must rejoin to the exact sentence they

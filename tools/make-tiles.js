@@ -78,7 +78,10 @@ const END_NOTE={
   "ている":"\u3066いる says it is going on right now.",
   "でした":"でした is the past of です."
 };
-const PART={"は":"topic marker","を":"object marker","が":"subject marker","に":"to / at",
+/* な is not a case marker but it behaves like one here: it is the tile that joins a
+   describing word to its noun, and without it きれいなうみ cannot be split at all. */
+const PART={"な":"describing",
+  "は":"topic marker","を":"object marker","が":"subject marker","に":"to / at",
   "へ":"toward","の":"of","と":"with","で":"by","も":"topic marker","から":"to / at",
   "まで":"to / at","や":"with","か":"question"};
 /* Words every sentence needs and the curriculum never teaches as vocabulary. */
