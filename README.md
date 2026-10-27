@@ -11,7 +11,8 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
    loanword goes meaning then English→katakana. A word written only in kana IS its own
    reading, so those take the loanword direction too — asking how すぐ is read would be a
    free point.
-3. **Build the sentence** — tap the words into order. The first 25 days use the
+3. **Build the sentence** — tap the words into order. The tiles show only Japanese; the
+   English appears on a wrong tap, where the teaching already happens. The first 25 days use the
    hand-written sentences in order, because they are a grammar syllabus: は before を
    before へ, each one introducing the next piece. After that the round draws on 389
    puzzles generated from the example sentences, so it only ever asks you to build a
@@ -27,16 +28,21 @@ forgetting: words learned once, got right, and not seen since. It scores like an
 round, and because the clock is the hard part a miss only moves a word back one box
 rather than all the way to the start.
 
-Two more rounds are written but stay shut until the habit is there, because they are
-harder and would be a reason to quit on day three. They open at a **streak**, with a day
-number as the slow road in — whichever comes first. A fourteen-day run is the habit
-demonstrated; a day number only measures persistence. The streak checked is the *best*
-one, never the current one: a round earned by two weeks of showing up should not slam
-shut again on the first day missed.
+The listening round stays shut until the habit is there, because it needs a device voice
+and would be a reason to quit on day three. It opens at a **streak**, with a day number
+as the slow road in — whichever comes first, and the streak checked is the *best* one,
+never the current one: a round earned by three weeks of showing up should not slam shut
+again on the first day missed.
 
-4. **Write it from memory** (14-day streak, or day 50) — spell a word you know on a two-tap gojūon kana
-   keyboard. No options. A wrong kana is refused where you tap it, and a wrong mark on
-   the right shape says so; after three slips it shows you the next kana and scores zero.
+Writing used to be gated the same way, until the gate turned out to be the mistake: a day
+of guessing right feels like learning and is not, so the round that cannot be guessed is
+the one that should never have waited.
+
+4. **Write it from memory** — one word, every day, from day one. Spell it on a two-tap
+   gojūon kana keyboard, with no options. A kana that carries a mark takes two taps — す
+   then ゛ for ず — so the base kana stands in its cell, dashed, until the mark lands. A
+   wrong kana is refused where you tap it, and a wrong mark on the right shape says so;
+   after three slips it shows you the next kana and scores zero.
 5. **Hear it** (21-day streak, or day 75) — the word is spoken by the device's Japanese voice and you pick
    it from words chosen for sounding close. No audio to host and it works offline; if
    the device has no Japanese voice the round is skipped and the card says so, rather
@@ -65,6 +71,30 @@ rounds already earned.
 
 Play it: **https://eddysant.github.io/mainichi/** — add it to your home screen and it
 runs full screen and offline.
+
+## Why the wrong answers are the ones they are
+
+Every round but this one shows you the answer somewhere on the screen, so the wrong
+answers decide whether a question measures anything. They used to be drawn uniformly at
+random, and that quietly made the day guessable: **96% of questions carried no near-miss
+at all**, and for kanji words **the right answer was the only option the learner had ever
+seen 72% of the time**. So a day could be scored 16/16 by spotting which word came up on
+today's card — and because a correct answer advances the review box, each lucky guess
+pushed that word from tomorrow out to two plays, then four, then eight. The score was
+lying to the schedule, which is the worst thing it could do: it removed from the rotation
+exactly the words that had not been learned.
+
+Two rules fix it. Options are drawn from **what the learner has already met**, so being
+the only familiar word on screen is no longer a cue. And they are chosen for being
+**close to the answer**: kana that look alike (ツ/シ, あ/お) or share a consonant or a
+vowel, words from the same grouping category or of the same kind, readings scored by the
+same soundalike function the listening round uses — which already existed, and had only
+ever been wired to a round locked until day 75. Its own comment said it: *a listening
+round whose wrong answers sound nothing alike is a vocabulary round*. Round two had been
+exactly that, every day.
+
+Recognition still cannot prove recall, which is why one word a day is now spelled out
+with nothing on screen to recognise.
 
 ## How the schedule works
 

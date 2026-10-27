@@ -78,9 +78,9 @@ const ROUNDS=[
    blurb:"Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due."},
   {key:"build", day:1,  ja:"三", name:"Build a sentence",
    blurb:"Tap the words into order."},
-  {key:"write", day:50, streak:14, ja:"四", name:"Write it from memory",
-   blurb:"Spell a word you know on a kana keyboard — no options to choose from.",
-   why:"Fifty days of picking the right answer out of four is recognition. This asks you to produce the word with nothing to recognise.",
+  {key:"write", day:1, ja:"四", name:"Write it from memory",
+   blurb:"Spell one word you know on a kana keyboard — no options to choose from.",
+   why:"Every other round gives you the answer somewhere on the screen. This one asks you to produce the word with nothing to recognise, which is the only way either of us finds out whether you know it.",
    how:["Tap a consonant row, then a vowel — the gojuon grid, two taps per kana.",
         "゙ and ゚ add the marks; 小 shrinks the last kana to っ or ゃ.",
         "A wrong kana is refused where you tap it, so you never fill in a whole wrong word."]},
@@ -206,18 +206,75 @@ function grade(id,ok,soft){
 }
 
 /* ---- round 2 questions ---- */
+/* ---- distractors that compete ----
+   Wrong answers used to be picked uniformly at random, and that quietly made the whole
+   round guessable: 96% of questions carried no near-miss, and for kanji words the answer
+   was the only option the learner had ever seen 72% of the time. So the score measured
+   which word came up on today's card, not whether it was known — and because a correct
+   answer advances the review box, a lucky guess pushed the item out of the schedule.
+
+   Two rules fix it. Options are drawn from what the learner has already met, so being
+   the only familiar word is no longer a cue; and they are chosen for being close to the
+   answer, so telling them apart needs the thing the question is asking about. */
+const LOOKALIKE=[["ツ","シ","ソ","ン"],["あ","お","ぬ","め"],["ね","れ","わ","ゎ"],["は","ほ","ま"],
+  ["き","さ","ち"],["る","ろ"],["ル","レ"],["ク","ケ","タ"],["コ","ユ","ヨ"],["フ","ワ","ウ"],
+  ["チ","テ"],["ス","ヌ","ズ"],["い","り"],["く","へ"],["せ","ぜ"],["カ","力"],["ニ","コ"],
+  ["ハ","ヘ"],["マ","ム"],["ア","マ"],["オ","才"],["ヤ","セ"]];
+/* the consonant and the vowel of a romaji syllable: ka -> k, a */
+const cons=r=>r.replace(/[aiueo]+$/,""), vow=r=>(r.match(/[aiueo]+$/)||[""])[0];
+/* Prefer what the learner has met: a word they have never seen is not a distractor,
+   it is a hint. Fall back to the rest only when there is not enough to choose from. */
+function metFirst(cands,n,score){
+  const met=cands.filter(c=>P.srs[c.id]), rest=cands.filter(c=>!P.srs[c.id]);
+  const take=list=>{
+    const ranked=list.slice().sort((a,b)=>score(b)-score(a));
+    const close=ranked.filter(c=>score(c)>0);
+    /* top of the field, then a little randomness so the same three never recur */
+    return shuffle(close.length>=n?close.slice(0,Math.max(n,Math.min(close.length,n*2))):ranked.slice(0,n*2));
+  };
+  const out=take(met).slice(0,n);
+  if(out.length<n) out.push.apply(out,take(rest).slice(0,n-out.length));
+  return out;
+}
+/* how nearly two kana could be mistaken for each other */
+const charScore=(it,set)=>c=>{
+  let sc=0;
+  if(LOOKALIKE.some(g=>g.indexOf(it.face)>=0&&g.indexOf(c[0])>=0)) sc+=5;
+  if(cons(c[1])===cons(it.romaji)) sc+=3;
+  if(vow(c[1])===vow(it.romaji)) sc+=2;
+  if(c[1].length===it.romaji.length) sc+=1;
+  return sc;
+};
+/* words are close when they belong to the same theme, or are the same kind of word */
+const CAT_OF=(()=>{const m=new Map();
+  if(typeof GROUPS!=="undefined")GROUPS.forEach(g=>g.clues.forEach(c=>m.set(c[0],g.answer)));
+  return m})();
+const kindOf=w=>/^to /.test(w[3]||w[2]||"")?"verb":(/い$/.test(w[0])&&/い$/.test(w[1]||"")?"adj":"noun");
+const wordScore=it=>w=>{
+  let sc=0;
+  const a=CAT_OF.get(w[0]), b=CAT_OF.get(it.face);
+  if(a&&b&&a===b) sc+=5;
+  if(kindOf(w)===kindOf([it.face,it.kana,it.romaji,it.en])) sc+=2;
+  if(Math.abs((w[1]||w[0]).length-(it.kana||it.face).length)<=1) sc+=1;
+  return sc;
+};
+/* an id for the item a raw content row stands for, so metFirst can ask whether it is known */
+const rowId=(pre,row)=>pre+row[0];
+
 function mkQ(id){
   const it=item(id), seen=(P.srs[id]||{}).seen||0;
   if(it.type==="char"){
-    const others=it.set.filter(c=>c[1]!==it.romaji);
+    const pre=it.set===KANA?"k":"t";
+    const others=it.set.filter(c=>c[1]!==it.romaji).map(c=>({id:rowId(pre,c),row:c}));
+    const near=n=>metFirst(others,n,o=>charScore(it,it.set)(o.row)).map(o=>o.row);
     if(seen%2===0){
-      const opts=shuffle([it.romaji].concat(pick(others,3).map(c=>c[1])));
+      const opts=shuffle([it.romaji].concat(near(3).map(c=>c[1])));
       return{id,q:"Which sound is this?",big:it.face,sub:it.script,subRoman:true,opts,answer:it.romaji,
         grid:true,ja:false,after:it.face+" = "+it.romaji};
     }
     /* The other direction. Recognising a character and producing it are different
        skills, and only this way round catches the pairs that look alike — ツ/シ, ソ/ン. */
-    const opts=shuffle([it.face].concat(pick(others,3).map(c=>c[0])));
+    const opts=shuffle([it.face].concat(near(3).map(c=>c[0])));
     return{id,q:"Which "+it.script+" is this sound?",big:it.romaji,roman:true,sub:"",opts,answer:it.face,
       grid:true,ja:true,after:it.romaji+" = "+it.face};
   }
@@ -228,7 +285,9 @@ function mkQ(id){
   const kanaOnly=it.face===it.kana;
   if(seen%2===0){
     const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
-    const opts=shuffle([it.en].concat(pick(it.set.filter(w=>mean(w)!==it.en),3).map(mean)));
+    const pre=it.type==="loanword"?"v":"w";
+    const cands=it.set.filter(w=>mean(w)!==it.en).map(w=>({id:rowId(pre,w),row:w}));
+    const opts=shuffle([it.en].concat(metFirst(cands,3,o=>wordScore(it)(o.row)).map(o=>mean(o.row))));
     /* a loanword carries no separate reading, so there is no bracket to show: the
        old test asked whether the face WAS the reading, which left "コーヒー ()" */
     const read=it.kana&&it.kana!==it.face?" ("+it.kana+")":"";
@@ -243,12 +302,23 @@ function mkQ(id){
   if(it.type==="loanword"||kanaOnly){
     const shape=w=>(w[0]===w[1])===kanaOnly;
     const pool=it.type==="loanword"?it.set:it.set.filter(shape);
-    const opts=shuffle([it.face].concat(pick(pool.filter(w=>w[0]!==it.face),3).map(w=>w[0])));
+    const pre=it.type==="loanword"?"v":"w";
+    const cands=pool.filter(w=>w[0]!==it.face).map(w=>({id:rowId(pre,w),row:w}));
+    const opts=shuffle([it.face].concat(metFirst(cands,3,o=>{
+      const w=o.row; let sc=wordScore(it)(w);
+      if(w[0][0]===it.face[0]) sc+=3;
+      if(w[0].length===it.face.length) sc+=2;
+      return sc;
+    }).map(o=>o.row[0])));
     return{id,q:"Which word is this?",big:it.en,gloss:true,
       sub:it.type==="loanword"?"katakana":"hiragana",subRoman:true,
       opts,answer:it.face,grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
   }
-  const opts=shuffle([it.kana].concat(pick(WORDS.filter(w=>w[1]!==it.kana),3).map(w=>w[1])));
+  /* the soundalike scoring already existed, and was only ever used by the listening
+     round — a reading question whose wrong answers sound nothing alike is the same
+     mistake it was written to prevent */
+  const rc=WORDS.filter(w=>w[1]!==it.kana).map(w=>({id:rowId("w",w),row:w}));
+  const opts=shuffle([it.kana].concat(metFirst(rc,3,o=>soundScore(it.kana)(o.row)).map(o=>o.row[1])));
   return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
     after:it.face+" = "+it.kana+" ("+it.romaji+") — "+it.en};
 }
@@ -612,7 +682,11 @@ function r3(){
     const t=T[i], b=document.createElement("button");
     b.className="tile"; b.type="button"; b.dataset.idx=i;
     const j=document.createElement("span"); j.textContent=t[0]; b.appendChild(j);
-    if(t[1]){const g=document.createElement("span"); g.className="g"; g.textContent=t[1]; b.appendChild(g)}
+    /* The English stays hidden until a wrong tap. With every tile glossed and every slot
+       labelled, the puzzle could be solved by matching "water" to "object" without
+       reading any Japanese — so the gloss arrives where the teaching already happens. */
+    if(t[1]){const g=document.createElement("span"); g.className="g"; g.textContent=t[1];
+      g.hidden=true; b.appendChild(g)}
     b.onclick=()=>place(b,i);
     tray.appendChild(b);
     return b;
@@ -621,10 +695,12 @@ function r3(){
   const markNext=()=>slotEls.forEach((d,i)=>d.classList.toggle("next",i===at&&!done));
   const says=r=>ROLE_SAY[r]||r;
 
+  const showGlosses=()=>tray.querySelectorAll("span.g").forEach(g=>{g.hidden=false});
   function place(btn,i){
     if(done||btn.classList.contains("used"))return;
     if(i!==at){
       slips++;
+      showGlosses();
       btn.classList.add("bad");
       setTimeout(()=>btn.classList.remove("bad"),340);
       const got=T[i], gotP=PARTICLES[got[0]], wantP=PARTICLES[T[at][0]];
@@ -683,7 +759,13 @@ const DAKU={"か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご","さ":"�
   "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど","は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ"};
 const HANDAKU={"は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ"};
 const SMALL={"あ":"ぁ","い":"ぃ","う":"ぅ","え":"ぇ","お":"ぉ","つ":"っ","や":"ゃ","ゆ":"ゅ","よ":"ょ","わ":"ゎ"};
-const WRITE_N=2;
+/* One word a day, spelled out. Recognition cannot prove recall — picking the right
+   answer out of four is a different act from producing the word — and this is the only
+   round with nothing to eliminate. It used to wait for day 50 on the argument that a
+   hard round early would be a reason to quit; the opposite turned out to be true, since
+   a day of guessing correctly feels like learning and is not. One item keeps the run
+   short enough that it is still a habit and not a session. */
+const WRITE_N=1;
 
 function writeIds(){
   const known=Object.keys(P.srs).filter(id=>id[0]==="w");
@@ -711,17 +793,31 @@ function nextWrite(){
   $("wEn").textContent=it.en;
   $("wNext").hidden=true;
   let typed="", slips=0, shown=false, done=false, row=null;
+  /* A kana that carries a mark is typed in two taps — す then ゛ for ず — so the base
+     has to be allowed to stand while it waits for its mark. It is held here rather than
+     appended, because until the mark lands it is not the kana that was asked for, and
+     putting it into `typed` would either complete the word wrongly or have to be unpicked.
+     Without this, every reading containing が, ず, っ or any other marked kana was
+     impossible to spell: the base was refused before the mark could be reached. */
+  let pending=null;
+  const BASE=c=>{for(const k in DAKU)if(DAKU[k]===c)return k;
+    for(const k in HANDAKU)if(HANDAKU[k]===c)return k;
+    for(const k in SMALL)if(SMALL[k]===c)return k;return c};
 
   const cells=$("wCells");
   function paint(){
     cells.innerHTML="";
     for(let i=0;i<want.length;i++){
       const d=document.createElement("div");
-      d.className="wc"+(i<typed.length?" on":"");
-      d.textContent=typed[i]||"";
+      const ch=typed[i]||(i===typed.length&&pending?pending:"");
+      d.className="wc"+(i<typed.length?" on":"")+(i===typed.length&&pending?" part":"");
+      d.textContent=ch;
       cells.appendChild(d);
     }
   }
+  /* The word is finished when it matches, not when it is the right length: a base kana
+     still waiting for its mark fills a cell without being the answer. */
+  function settled(){ return typed===want }
   function refuse(ch){
     slips++;
     const d=cells.children[typed.length];
@@ -730,8 +826,7 @@ function nextWrite(){
     /* Say what is wrong about THIS kana rather than just "no": a learner who typed か
        for が has the right shape and the wrong voicing, and should be told that. */
     const want1=want[typed.length];
-    const base=c=>{for(const k in DAKU)if(DAKU[k]===c)return k;for(const k in HANDAKU)if(HANDAKU[k]===c)return k;
-      for(const k in SMALL)if(SMALL[k]===c)return k;return c};
+    const base=BASE;
     if(base(ch)===base(want1)) $("wNote").textContent="Right shape, wrong mark — "+want1+", not "+ch+".";
     else if(slips>=3){ $("wNote").textContent="Next is "+want1+"."; }
     else $("wNote").textContent="Not "+ch+" there.";
@@ -744,13 +839,27 @@ function nextWrite(){
   }
   function put(ch){
     if(done)return;
-    if(ch!==want[typed.length])return refuse(ch);
+    const at=typed.length, want1=want[at];
+    if(ch!==want1){
+      /* the right shape, waiting for its mark */
+      if(BASE(want1)===ch&&want1!==ch){
+        pending=ch; paint();
+        $("wNote").className="note";
+        $("wNote").textContent="Now the mark.";
+        return;
+      }
+      return refuse(ch);
+    }
+    pending=null;
     typed+=ch; paint();
-    if(typed.length<want.length){
+    if(!settled()){
       $("wNote").className="note";
       $("wNote").textContent=typed.length+" of "+want.length+".";
       return;
     }
+    finishWord();
+  }
+  function finishWord(){
     done=true;
     const pts=shown?0:slips===0?2:1;
     run.r4=(run.r4||0)+pts;
@@ -763,7 +872,10 @@ function nextWrite(){
       :run.plan[run.step+1]?"Last round":"See today’s card";
   }
   function del(){
-    if(done||!typed.length)return;
+    if(done)return;
+    if(pending){ pending=null; paint();
+      $("wNote").className="note"; $("wNote").textContent=""; return }
+    if(!typed.length)return;
     typed=typed.slice(0,-1); paint();
     $("wNote").className="note"; $("wNote").textContent="";
   }
@@ -800,34 +912,38 @@ function nextWrite(){
       :kind==="small"?"small kana":"delete");
     b.onclick=()=>{
       if(kind==="del")return del();
-      if(done||!typed.length)return;
-      const last=typed[typed.length-1];
+      if(done)return;
+      /* The mark belongs to the kana waiting for it. */
+      const last=pending;
+      if(!last){
+        $("wNote").className="note bad";
+        $("wNote").textContent="Tap the kana first, then its mark.";
+        return;
+      }
       const map=kind==="daku"?DAKU:kind==="handaku"?HANDAKU:SMALL;
       const to=map[last];
+      const at=typed.length;
       if(!to){
         $("wNote").className="note bad";
         $("wNote").textContent=last+" does not take that mark.";
         return;
       }
-      /* Check before replacing. Running this through put() would strip the kana first
-         and leave the word short when the mark turns out to be wrong. */
-      const at=typed.length-1;
       if(to!==want[at]){
         const d=cells.children[at];
         if(d){d.classList.add("bad");setTimeout(()=>d.classList.remove("bad"),340)}
         slips++;
         $("wNote").className="note bad";
-        $("wNote").textContent=want[at]+" takes no mark there.";
+        $("wNote").textContent="Right shape, wrong mark \u2014 "+want[at]+", not "+to+".";
         return;
       }
-      typed=typed.slice(0,at)+to; paint();
-      $("wNote").className="note";
-      $("wNote").textContent=typed.length+" of "+want.length+".";
-      if(typed.length===want.length){
-        /* the mark completed the word */
-        typed=typed.slice(0,-1);
-        put(to);
+      pending=null;
+      typed+=to; paint();
+      if(!settled()){
+        $("wNote").className="note";
+        $("wNote").textContent=typed.length+" of "+want.length+".";
+        return;
       }
+      finishWord();
     };
     mods.appendChild(b);
   });
@@ -865,8 +981,10 @@ function speak(text){
 }
 /* Distractors that sound close: same length, same first or last mora, shared kana.
    A listening round whose wrong answers sound nothing alike is a vocabulary round. */
-function soundalikes(kana,n){
-  const score=w=>{
+/* A declaration rather than a const, because the recall round calls it from higher up
+   the file: the reading questions use the same scoring as the listening round. */
+function soundScore(kana){
+  return w=>{
     const b=w[1]; let sc=0;
     if(b.length===kana.length)sc+=3;
     else if(Math.abs(b.length-kana.length)===1)sc+=1;
@@ -875,6 +993,9 @@ function soundalikes(kana,n){
     for(const c of new Set(kana))if(b.indexOf(c)>=0)sc+=1;
     return sc;
   };
+}
+function soundalikes(kana,n){
+  const score=soundScore(kana);
   const near=WORDS.filter(w=>w[1]!==kana).sort((a,b)=>score(b)-score(a)).slice(0,n*2);
   return pick(near,n);
 }

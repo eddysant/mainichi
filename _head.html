@@ -194,6 +194,9 @@ h2{font-size:1.125rem;line-height:1.35}
 .wc.on{border-color:var(--ok);background:var(--ok-soft)}
 .wc.on::after{opacity:0}
 .wc.bad{animation:shake .3s;border-color:var(--no)}
+/* a base kana waiting for its mark: placed, but not yet the answer */
+.wc.part{border-color:var(--rule-s);border-style:dashed;color:var(--ink-soft)}
+.wc.part::after{opacity:0}
 .kbd{display:flex;flex-direction:column;gap:.3rem}
 .krow{display:grid;grid-template-columns:repeat(6,1fr);gap:.25rem}
 .krow.kvow{grid-template-columns:repeat(5,1fr);min-height:2.6rem}
