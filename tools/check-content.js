@@ -49,6 +49,14 @@ W.forEach((w,i)=>{
   else dupE.set(w[3],w[0]);
   if(w.length!==4) bad.push(w[0]+": wrong field count");
 });
+/* An item's id is its face — "w水", not "w0" — so a repeated face inside one stream
+   would be two items sharing one review schedule. Identity rests on this, so check it
+   rather than assume it. */
+[["hiragana",KA],["katakana",KT],["loanwords",KW],["words",W]].forEach(([name,set])=>{
+  const seen=new Set();
+  set.forEach(x=>{ if(seen.has(x[0])) bad.push("two "+name+" share the face "+x[0]+", which is an id"); else seen.add(x[0]) });
+});
+
 /* katakana set lines up with the hiragana, and the loanwords are really katakana */
 if(KA.length!==KT.length) bad.push("kana sets differ in length");
 KA.forEach((k,i)=>{ if(KT[i]&&k[1]!==KT[i][1]) bad.push("kana order differs at "+i); });
@@ -126,8 +134,9 @@ const PARTROLE=new Set(["topic marker","object marker","subject marker","to / at
 const seenId=new Set();
 BUILD.forEach((b,i)=>{
   const where="tiles.js #"+i+" ("+b.id+")";
-  const face=/^w/.test(b.id)?(W[+b.id.slice(1)]||[])[0]:(KW[+b.id.slice(1)]||[])[0];
-  if(!face){ bad.push(where+": id points at no word"); return; }
+  /* The id is the item itself, so it must name something real in the right stream. */
+  const face=b.id.slice(1), set=b.id[0]==="w"?W:b.id[0]==="v"?KW:null;
+  if(!set||!set.some(x=>x[0]===face)){ bad.push(where+": id names no word in its stream"); return; }
   if(seenId.has(b.id)) bad.push(where+": two puzzles for the same word"); else seenId.add(b.id);
   const sent=(USAGE[face]||[])[0];
   if(!sent){ bad.push(where+": "+face+" has no example sentence"); return; }
@@ -148,7 +157,7 @@ BUILD.forEach((b,i)=>{
 
 if(bad.length){ console.log("PROBLEMS ("+bad.length+"):"); [...new Set(bad)].forEach(b=>console.log("  - "+b)); process.exit(1); }
 console.log("content OK");
-console.log("  "+W.length+" words \u2014 romaji re-derived from kana and matching, readings and meanings unique, all typeable");
+console.log("  "+W.length+" words \u2014 romaji re-derived from kana and matching, readings, meanings and faces unique, all typeable");
 console.log("  "+KA.length+" hiragana / "+KT.length+" katakana, aligned; "+KW.length+" loanwords, all katakana");
 console.log("  "+GROUPS.length+" grouping puzzles, every answer a real category");
 console.log("  "+Object.keys(USAGE||{}).length+" example sentences \u2014 one per word, none shared, each containing its word");

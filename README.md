@@ -173,6 +173,28 @@ every example sentence must contain the word it illustrates — its stem counts,
 conjugated verb never contains its dictionary form, and 来る and する are named outright
 because they change stem completely. Run it after touching `content.js`.
 
+## Item ids, and why the curriculum can be edited
+
+An item's id is the item itself: `w水`, `kあ`, `vコーヒー`. It used to be the position in
+the array — `w0`, `w200` — and that quietly made the whole curriculum append-only.
+Inserting 降る beside the other verbs shifted every id after it, so every saved review
+schedule from that point on pointed at a different word: something mastered would come
+back as new, and something never seen would be treated as scheduled. Appending instead
+kept saves intact but put a word needed by day 20's example sentence at day 390.
+
+So faces are the identity. They are unique within each stream and `check-content.js`
+enforces it, because a repeated face would be two items sharing one schedule. Where an
+item sits in the curriculum is still needed — the flashback means "the last ten days" —
+but that is *ordering*, looked up when wanted, and it is no longer identity.
+
+`_legacy-ids.js` holds the curriculum order as it stood under the old scheme. It is the
+only record of what `w200` meant, so it is frozen: never regenerated, never reordered.
+A save still marked `v:1` is remapped through it once, on load, and rewritten as `v:2`.
+Every load also drops ids that name nothing in the current content set, so removing a
+word can no longer leave a schedule pointing at something that is not there.
+
+Words can now be inserted wherever they belong.
+
 ## Streak freezes
 
 One freeze is earned every ten days played, and you can hold three. A missed day spends
@@ -188,7 +210,7 @@ seven-day row instead of the 日 seal.
 
 No cookies. Nothing is tracked, measured or reported. One `localStorage` key,
 `mainichi.v1`, holds the lesson number, the streak, the review schedule and the reminder
-time; it is first-party, never read by anything else, and clearing site data erases it.
+time, keyed by the items themselves (`w水`); it is first-party, never read by anything else, and clearing site data erases it.
 
 Exactly one request goes to a third party: the stylesheet from `fonts.googleapis.com`
 (and the font files from `fonts.gstatic.com`). That hands Google the visitor's IP
@@ -207,6 +229,7 @@ Because there are no cookies and no tracking, no consent banner is required.
 
 | path | what it is |
 | --- | --- |
+| `_legacy-ids.js` | **frozen** — the old positional curriculum order, for migrating `v:1` saves; never regenerate |
 | `tiles.js` | **generated** — round-three tile puzzles; run `tools/make-tiles.js` after editing `content.js` |
 | `content.js` | the whole curriculum — hiragana, katakana, loanwords, kanji words, sentences, grouping puzzles |
 | `_head.html` | title, styles, markup |

@@ -28,6 +28,19 @@ const SCRIPTS=[
   ["w","kanji",WORDS]
 ];
 const PER_SCRIPT=2;
+/* ---- item ids ----
+   An id is the item itself — "w水", not "w0". Array positions made the curriculum
+   append-only: inserting a word shifted every id after it, so every saved review
+   schedule from that point on silently pointed at a different word, and a mastered word
+   would come back as new while an unseen one was treated as scheduled. Faces are unique
+   within each stream and checked to be, so they serve as identity. Where an item sits in
+   the curriculum is still needed — for "the last ten days" — but that is ordering, and
+   ordering is not identity. */
+const SETOF={k:KANA,t:KATAKANA,v:KATA_WORDS,w:WORDS};
+const IDX={}; Object.keys(SETOF).forEach(p=>{ IDX[p]=new Map(SETOF[p].map((x,i)=>[x[0],i])) });
+const idOf=(p,i)=>p+SETOF[p][i][0];
+const orderOf=id=>{ const m=IDX[id[0]], i=m&&m.get(id.slice(1)); return i===undefined||i===false?-1:i };
+const known=id=>orderOf(id)>=0;
 const charItem=(p,script,set)=>i=>
   ({id:p+i,type:"char",script,set,face:set[i][0],kana:"",romaji:set[i][1],en:"the sound “"+set[i][1]+"”"});
 const kanaItem=charItem("k","hiragana",KANA);
@@ -37,14 +50,14 @@ const wordItem=i=>({id:"w"+i,type:"kanjiword",script:"kanji",set:WORDS,
 const loanItem=i=>({id:"v"+i,type:"loanword",script:"katakana word",set:KATA_WORDS,
   face:KATA_WORDS[i][0],kana:"",romaji:KATA_WORDS[i][1],en:KATA_WORDS[i][2],note:KATA_WORDS[i][3]||""});
 const usageFor=it=>(typeof USAGE==="object"&&USAGE[it.face])||null;
-const item=id=>{const n=+id.slice(1);
+const item=id=>{const n=orderOf(id);
   return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):id[0]==="v"?loanItem(n):wordItem(n)};
 /* The lowest item of each script not yet introduced, rather than the one at the
    lesson index: that way adding katakana part-way through does not skip ア onwards,
    and a schedule that drifts for any other reason heals itself. */
 function newToday(){
   return SCRIPTS.map(([p,,set])=>{
-    for(let i=0;i<set.length;i++)if(!P.srs[p+i])return p+i;
+    for(let i=0;i<set.length;i++){ const id=idOf(p,i); if(!P.srs[id])return id }
     return null;
   }).filter(Boolean);
 }
@@ -113,11 +126,41 @@ const roundBy=k=>k==="bonus"?BONUS_ROUND:k==="recap"?RECAP_ROUND
   :k==="flash"?FLASH_ROUND:ROUNDS.filter(r=>r.key===k)[0];
 
 /* ---- progress ---- */
-const blank=()=>({v:1,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
+const blank=()=>({v:2,remindAt:null,lesson:0,plays:0,streak:0,best:0,last:null,history:[],srs:{},
   lastRun:null,metRounds:[],freezes:0,freezesEarned:0,frozen:[],recent:[],b3:[]});
 let P=blank(), run=null, docRef=null;
 const LS="mainichi.v1";
-function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),JSON.parse(r))}catch(e){}return null}
+/* A save written when ids were array positions is remapped once, through the frozen
+   order in _legacy-ids.js — the only record of what "w200" meant. Then, every load,
+   ids that name nothing in the current content set are dropped: without that, deleting
+   a word from content.js would leave a schedule pointing at a word that is not there. */
+function readyState(raw){
+  const p=raw||{};
+  if((p.v||1)<2 && typeof LEGACY_ORDER!=="undefined"){
+    const fix=id=>{
+      const m=/^([ktvw])(\d+)$/.exec(String(id));
+      if(!m)return id;
+      const face=(LEGACY_ORDER[m[1]]||[])[+m[2]];
+      return face?m[1]+face:null;
+    };
+    const srs={};
+    Object.keys(p.srs||{}).forEach(k=>{ const n=fix(k); if(n)srs[n]=p.srs[k] });
+    p.srs=srs;
+    const arr=a=>Array.isArray(a)?a.map(fix).filter(Boolean):a;
+    p.b3=arr(p.b3);
+    if(p.lastRun){
+      ["newIds","dueIds","wIds","lIds","cIds"].forEach(k=>{ p.lastRun[k]=arr(p.lastRun[k]) });
+      if(p.lastRun.sRef){ const n=fix(p.lastRun.sRef); p.lastRun.sRef=n||p.lastRun.sRef }
+    }
+    p.v=2;
+  }
+  const srs={};
+  Object.keys(p.srs||{}).forEach(k=>{ if(known(k))srs[k]=p.srs[k] });
+  p.srs=srs;
+  if(Array.isArray(p.b3))p.b3=p.b3.filter(id=>known(id));
+  return p;
+}
+function loadLocal(){try{const r=localStorage.getItem(LS);if(r)return Object.assign(blank(),readyState(JSON.parse(r)))}catch(e){}return null}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(P))}catch(e){}}
 async function initCloud(){
   try{
@@ -126,7 +169,7 @@ async function initCloud(){
     const id=await u.id(); if(!id)return false;
     docRef=db.doc("data/users/"+id+"/progress");
     const s=await docRef.get();
-    if(s.exists){const d=s.data();if(d&&typeof d.plays==="number"&&d.plays>=(P.plays||0))P=Object.assign(blank(),d)}
+    if(s.exists){const d=s.data();if(d&&typeof d.plays==="number"&&d.plays>=(P.plays||0))P=Object.assign(blank(),readyState(d))}
     return true;
   }catch(e){return false}
 }
@@ -927,9 +970,9 @@ const flashDay=day=>day%FLASH_EVERY===0;
 function flashIds(n){
   const take=[];
   SCRIPTS.forEach(([pre])=>{
-    const idx=Object.keys(P.srs).filter(id=>id[0]===pre).map(id=>+id.slice(1))
-      .sort((a,b)=>b-a).slice(0,FLASH_BLOCK);
-    take.push(shuffle(idx.map(i=>pre+i)));
+    const recent=Object.keys(P.srs).filter(id=>id[0]===pre)
+      .sort((a,b)=>orderOf(b)-orderOf(a)).slice(0,FLASH_BLOCK);
+    take.push(shuffle(recent));
   });
   const out=[];
   for(let r=0;r<FLASH_BLOCK&&out.length<n;r++)

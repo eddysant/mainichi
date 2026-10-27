@@ -93,8 +93,8 @@ const FUNC={"わたし":["I","topic"],"これ":["this","subject"],"それ":["tha
 
 const lex=new Map();
 const add=(s,e)=>{ e.srf=s; const a=lex.get(s)||[]; a.push(e); lex.set(s,a) };
-W.forEach((w,i)=>forms(w).forEach(f=>add(f.s,{kind:"word",id:"w"+i,face:w[0],en:w[3],pos:pos(w),shape:f.shape})));
-KW.forEach((w,i)=>add(w[0],{kind:"word",id:"v"+i,face:w[0],en:w[2],pos:"noun",shape:"dict"}));
+W.forEach(w=>forms(w).forEach(f=>add(f.s,{kind:"word",id:"w"+w[0],face:w[0],en:w[3],pos:pos(w),shape:f.shape})));
+KW.forEach(w=>add(w[0],{kind:"word",id:"v"+w[0],face:w[0],en:w[2],pos:"noun",shape:"dict"}));
 Object.keys(FUNC).forEach(k=>add(k,{kind:"func",face:k,en:FUNC[k][0],role:FUNC[k][1],shape:"dict",pos:"noun"}));
 Object.keys(PART).forEach(p=>add(p,{kind:"part",face:p,role:PART[p],shape:"part"}));
 

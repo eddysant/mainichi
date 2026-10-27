@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")"
 
-{ cat _head.html; echo '<script>'; cat content.js; cat tiles.js; echo '</script>'
+{ cat _head.html; echo '<script>'; cat content.js; cat tiles.js; cat _legacy-ids.js; echo '</script>'
   echo '<script>'; cat _game.js; echo '</script>'; } > index.html
 
 mkdir -p docs
