@@ -96,6 +96,18 @@ exactly that, every day.
 Recognition still cannot prove recall, which is why one word a day is now spelled out
 with nothing on screen to recognise.
 
+Both rules had to be applied twice, because the rounds that only come round on certain
+days had never been played. **The listening round** drew its options from the whole word
+set and scored equal length as a resemblance worth three points, which put every
+two-mora word in contention: だれ scored 132 words alike, so the round offered ねこ and
+いぬ against it, and 56% of a day-75 learner's options were words never met. Sharing no
+kana with the answer now scores zero, and the options come from met words first —
+がっこう is asked against りょこう, ぎんこう and がくせい. **The catch-up and the lightning
+round** picked their single wrong answer uniformly at random, so on day seven the
+catch-up asked 猫 against "to begin", a word from day 340. With two options an unmet
+answer is not a distractor but a pointer at the other one; they now use the same scored,
+met-first pool as round two.
+
 ## How the schedule works
 
 Lessons advance by *plays*, not by calendar date, so a missed day never skips material —

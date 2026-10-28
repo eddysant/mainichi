@@ -3979,18 +3979,24 @@ function speak(text){
 function soundScore(kana){
   return w=>{
     const b=w[1]; let sc=0;
+    const shared=[...new Set(kana)].filter(c=>b.indexOf(c)>=0).length;
+    /* Sharing no kana at all is not a resemblance, however the lengths line up. Giving
+       equal length three points on its own put every two-mora word in contention: だれ
+       scored 132 words alike, and the round offered ねこ and いぬ against it. A word the
+       ear has nothing to confuse scores zero, and metFirst passes over it. */
+    if(!shared)return 0;
     if(b.length===kana.length)sc+=3;
     else if(Math.abs(b.length-kana.length)===1)sc+=1;
     if(b[0]===kana[0])sc+=2;
     if(b[b.length-1]===kana[kana.length-1])sc+=2;
-    for(const c of new Set(kana))if(b.indexOf(c)>=0)sc+=1;
-    return sc;
+    return sc+shared;
   };
 }
+/* Met words first, exactly as the recall round does it: the answer is always a word you
+   have met, so an option you have never seen is a tell before the sound is considered. */
 function soundalikes(kana,n){
-  const score=soundScore(kana);
-  const near=WORDS.filter(w=>w[1]!==kana).sort((a,b)=>score(b)-score(a)).slice(0,n*2);
-  return pick(near,n);
+  const cands=WORDS.filter(w=>w[1]!==kana).map(w=>({id:rowId("w",w),row:w}));
+  return metFirst(cands,n,o=>soundScore(kana)(o.row)).map(o=>o.row);
 }
 function listenIds(){
   const known=Object.keys(P.srs).filter(id=>id[0]==="w");
@@ -4105,15 +4111,23 @@ const QF={
 };
 function xq(id){
   /* Two options and four seconds: this is recall at speed, not a thinking round, so
-     the question is always the easy direction. */
+     the question is always the easy direction. The one wrong answer still has to be a
+     word you have met and a plausible near-miss: picked at random it was neither, and
+     on day seven the catch-up asked 猫 against "to begin" — a word from day 340. With
+     two options, an answer you have never seen is not a distractor, it is a pointer at
+     the other one. */
   const it=item(id);
   if(it.type==="char"){
-    const other=pick(it.set.filter(c=>c[1]!==it.romaji),1)[0];
+    const pre=it.set===KANA?"k":"t";
+    const cands=it.set.filter(c=>c[1]!==it.romaji).map(c=>({id:rowId(pre,c),row:c}));
+    const other=metFirst(cands,1,o=>charScore(it,it.set)(o.row))[0].row;
     return{big:it.face,ja:false,opts:shuffle([it.romaji,other[1]]),answer:it.romaji,
       after:it.face+" = "+it.romaji};
   }
   const mean=it.type==="loanword"?w=>w[2]:w=>w[3];
-  const other=pick(it.set.filter(w=>mean(w)!==it.en),1)[0];
+  const pre=it.type==="loanword"?"v":"w";
+  const cands=it.set.filter(w=>mean(w)!==it.en).map(w=>({id:rowId(pre,w),row:w}));
+  const other=metFirst(cands,1,o=>wordScore(it)(o.row))[0].row;
   return{big:it.face,ja:false,opts:shuffle([it.en,mean(other)]),answer:it.en,
     after:it.face+" — "+it.en};
 }
