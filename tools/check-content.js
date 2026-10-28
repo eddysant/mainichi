@@ -131,6 +131,15 @@ catch(e){ bad.push("tiles.js missing or unreadable — run tools/make-tiles.js")
 const roles=new Set(Object.keys(ROLE_SAY));
 const PARTROLE=new Set(["topic marker","object marker","subject marker","to / at","toward",
   "of","with","by","question"]);
+/* every reading the curriculum teaches, for the split-word check below */
+const READING=new Map();
+W.forEach(w=>READING.set(w[1],w[0]+" ("+w[3]+")"));
+KW.forEach(w=>READING.set(w[0],w[0]+" ("+w[2]+")"));
+/* つくえのうえにほんがあります is "there is a book on the desk": に + ほん is the right
+   split, and にほん spelling 日本 is a coincidence of a language written without spaces.
+   Named here rather than inferred, because nothing in the characters can tell them
+   apart — only the fact that 日本があります is not a sentence anyone would write. */
+const SPLIT_OK=new Set(["\u3064\u304f\u3048\u306e\u3046\u3048\u306b\u307b\u3093\u304c\u3042\u308a\u307e\u3059\u3002"]);
 const seenId=new Set();
 BUILD.forEach((b,i)=>{
   const where="tiles.js #"+i+" ("+b.id+")";
@@ -153,6 +162,17 @@ BUILD.forEach((b,i)=>{
   const isP=t=>PARTROLE.has(t[2]);
   if(isP(b.tiles[0])) bad.push(where+": opens with a particle");
   b.tiles.forEach((t,j)=>{ if(j&&isP(t)&&isP(b.tiles[j-1])) bad.push(where+": two particles in a row at "+j) });
+  /* A mis-parse does not always announce itself as a rejection: with はじめて unlicensed,
+     the only parse left standing for はじめてにほんへいきます cut 日本 in half and glossed
+     ほん as "book". So no run of tiles may spell a word the curriculum teaches —
+     unless it is one of the coincidences named below, where the split really is right
+     and the characters happen to spell something else as well. */
+  const t=b.tiles.map(x=>x[0]);
+  for(let a=0;a<t.length-1;a++) for(let z=a+2;z<=Math.min(t.length,a+3);z++){
+    const join=t.slice(a,z).join("");
+    if(READING.has(join)&&!SPLIT_OK.has(sent))
+      bad.push(where+": the tiles "+t.slice(a,z).join("|")+" spell "+READING.get(join)+", so the split may be wrong");
+  }
 });
 
 if(bad.length){ console.log("PROBLEMS ("+bad.length+"):"); [...new Set(bad)].forEach(b=>console.log("  - "+b)); process.exit(1); }

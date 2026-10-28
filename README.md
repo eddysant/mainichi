@@ -14,7 +14,7 @@ A daily Japanese micro-puzzle. Three rounds to start, about ninety seconds:
 3. **Build the sentence** — tap the words into order. The tiles show only Japanese; the
    English appears on a wrong tap, where the teaching already happens. The first 25 days use the
    hand-written sentences in order, because they are a grammar syllabus: は before を
-   before へ, each one introducing the next piece. After that the round draws on 447
+   before へ, each one introducing the next piece. After that the round draws on 490
    puzzles generated from the example sentences, so it only ever asks you to build a
    sentence out of a word you have already met — and met on an earlier day, not this
    morning, which makes the round consolidation rather than a preview. Played puzzles
@@ -130,11 +130,11 @@ than skipping to wherever the learner had got to.
 Hiragana has no word stream of its own because it already has one: the kanji words are
 drilled in both directions, and the reading direction is hiragana.
 
-The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 409 words,
-25 hand-written sentences, 447 generated sentence puzzles and 28 grouping puzzles —
-409 days of new material before it becomes review-only.
+The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 415 words,
+25 hand-written sentences, 490 generated sentence puzzles and 28 grouping puzzles —
+415 days of new material before it becomes review-only.
 
-**Example sentences.** Every word carries one — all 409 words and all 75 loanwords, 484
+**Example sentences.** Every word carries one — all 415 words and all 75 loanwords, 490
 in total, with no two sharing a sentence. A gloss says what a word points at; only a
 sentence says what it does — 好き takes が and not を, a hat is かぶる but trousers are はく,
 medicine is drunk, and no English equivalent will ever tell you that. 49 of them carry
@@ -192,16 +192,40 @@ a list rather than inferred — relaxing the rule instead cost 60 puzzles and fo
 the ambiguity.
 
 Part of speech comes free from the glosses: every verb and only a verb is glossed
-"to ...", and an い-adjective is the one written with its い in the kanji face, which
-先生 is not.
+"to ...", and an い-adjective is the one written with its い after a kanji, which 先生 is
+not. That last rule needed one correction: a word written in kana alone that happens to
+end in い is not an い-adjective, so におい was being called one, and きれい — a な-adjective
+— along with it. Calling a noun an adjective both mislabels the tile and licenses it to
+stand in front of a noun, which is how a mis-split gets through. The two genuine
+kana-only adjectives, やさしい and おいしい, are named in a list; a な-adjective is labelled
+by the な that follows it.
 
-447 of the 484 sentences earn a puzzle. The 37 rejects are listed by
-`node tools/make-tiles.js -v`. The bulk of the earlier 73 were a vocabulary gap rather
-than a parser fault — そらはあおいです needs 青い and the set had only 青 — and the words
-have since been added. What is left is mostly 形 and どんな, which stand in front of a
-noun and would need licensing the way a pointer does; three are two sentences joined by
-だから, でも or それから, which would need a tile for the full stop between them; and three
-come out as a single tile, with no order left to get right.
+All 490 sentences earn a puzzle, which took three rounds of classifying the rejects
+rather than one change. The last 37 were five separate things: six words the sentences
+used and the curriculum never taught (とる, いい, みがく, ひく, はく, かいもの); a dozen
+adverbs and time words the parser would not let stand without a particle after them
+(かならず, たぶん, まず, ぜんぶ, ごご, さいきん…); six entries in the function-word list that
+duplicated real curriculum words, so every sentence using one parsed twice over with two
+different glosses and was thrown out as *two readings*; counters and pre-noun words
+(こどもが **さんにん** います, **どんな** ほん) that hand straight to what follows; and three
+sentences joined by だから, でも or それから, which now earn a puzzle with a tile for the
+full stop between the clauses.
+
+Two things are now separate tiles rather than inflection riding on the verb: **ください**,
+because the verb before it stays in its て form and that is the whole lesson, and the
+**います** of the progressive. Merging them had hidden the grammar and left こまっています
+as a single tile with no order to get right. ください may also follow a noun or a particle,
+since はんぶんください and あついコーヒーをください are whole requests with no verb in them.
+
+**100% coverage is what a weakened rule looks like**, so the gain was audited rather
+than trusted. The audit found a wrong puzzle that had been shipping since well before
+this pass: はじめてにほんへいきます was tiled as はじめて|に|ほん|へ|いきます, cutting 日本 in
+half and glossing ほん as "book". It survived because はじめて was not in the adverb list,
+so the correct four-tile parse was invalid and the five-tile mis-split was the only one
+left standing. An unlicensed word does not merely lose a sentence; it can hand the prize
+to a mis-parse. The checker now enforces that no run of tiles may spell a word the
+curriculum teaches, with the one genuine coincidence named by hand (つくえのうえにほんが
+あります is "a book on the desk", where に + ほん really is the right split).
 
 **Where a new word goes.** Not at the end, and not next to a relative: a word is
 inserted immediately before the earliest existing word whose sentence uses it, so it is

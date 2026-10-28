@@ -21,7 +21,14 @@ eval(src+";global.W=WORDS;global.KW=KATA_WORDS;global.U=USAGE;global.P=PARTICLES
 /* Part of speech, read off the glosses the content set already writes: every verb and
    only a verb is glossed "to ...", and an い-adjective is the one written with its い
    in the kanji face, which 先生 is not. */
-const pos=w=>/^to /.test(w[3]) ? "verb" : (/い$/.test(w[0])&&/い$/.test(w[1]) ? "adj" : "noun");
+/* An い-adjective in this set is written with its い after a kanji — 高い, 新しい — which
+   is what tells it from 先生. A word written in kana alone that happens to end in い is
+   not one: におい is a noun and きれい is a な-adjective, and calling them い-adjectives
+   both mislabelled the tile and licensed them to stand in front of a noun, which is how
+   a mis-split gets through. The two genuine kana-only adjectives are named. */
+const KANA_ADJ=new Set(["やさしい","おいしい"]);
+const pos=w=>/^to /.test(w[3]) ? "verb"
+  : (/い$/.test(w[0])&&/い$/.test(w[1])&&(w[0]!==w[1]||KANA_ADJ.has(w[1])) ? "adj" : "noun");
 
 const ROW={"う":"い","く":"き","ぐ":"ぎ","す":"し","つ":"ち","ぬ":"に","ぶ":"び","む":"み","る":"り"};
 const TE ={"う":"って","つ":"って","る":"って","く":"いて","ぐ":"いで","す":"して","ぬ":"んで","ぶ":"んで","む":"んで"};
@@ -62,10 +69,17 @@ function forms(w){
 const ENDS=[
   ["ませんでした",["stem"]],["ましょう",["stem"]],["ませんか",["stem"]],["ません",["stem"]],
   ["ました",["stem"]],["ます",["stem"]],
-  ["います",["te"]],["いる",["te"]],["ください",["te"]],
+  ["いました",["te"]],["います",["te"]],["いる",["te"]],["ください",["te","dict","part"]],
   ["でした",["dict","past"]],["です",["dict","past"]]
 ].sort((a,b)=>b[0].length-a[0].length);
 
+/* An ending that is a word in its own right gets its own tile. ます and its family are
+   inflection and ride on the verb, but ください is 下さい — the verb before it stays in
+   its て form, which is the whole point — and います is the auxiliary that makes the
+   progressive. Merging them hid the grammar and left こまっています as a single tile with
+   no order to get right. */
+const OWN={"ください":"please","います":"going on now","いる":"going on now",
+  "いました":"was going on"};
 const END_NOTE={
   "ます":"ます closes a polite verb, and the verb always lands at the end.",
   "ました":"ました is the polite past. The verb still lands at the end.",
@@ -75,11 +89,26 @@ const END_NOTE={
   "ませんか":"ませんか invites — \u201cwon\u2019t you?\u201d",
   "ください":"ください asks for something politely, after the \u3066 form of the verb.",
   "ています":"\u3066います says it is going on right now.",
+  "ていました":"\u3066いました says it was going on at the time.",
+  "いました":"\u3066いました says it was going on at the time.",
+  "います":"\u3066います says it is going on right now.",
   "ている":"\u3066いる says it is going on right now.",
   "でした":"でした is the past of です."
 };
 /* な is not a case marker but it behaves like one here: it is the tile that joins a
    describing word to its noun, and without it きれいなうみ cannot be split at all. */
+/* What a joined sentence turns on is the word that joins it, so that is what the note
+   has to be about: the fallback was explaining です to a learner looking at だから. */
+const CONN_NOTE={
+  "だから":"だから joins two sentences — the first one is the reason for the second.",
+  "でも":"でも joins two sentences — the second one goes against the first.",
+  "それから":"それから joins two sentences — the second one happens after the first."};
+/* ください usually follows a て form, but はんぶんください is a whole request with no verb
+   in it, and the ending's note said "after the て form of the verb" to a learner looking
+   at a noun. */
+const ownNote=(end,tiles)=> end!=="ください" ? END_NOTE[end]
+  : tiles.some(t=>t[2]==="te form") ? END_NOTE["ください"]
+  : "ください asks for something politely — with a noun in front of it, that is the whole request.";
 const PART={"な":"describing",
   "は":"topic marker","を":"object marker","が":"subject marker","に":"to / at",
   "へ":"toward","の":"of","と":"with","で":"by","も":"topic marker","から":"to / at",
@@ -87,16 +116,29 @@ const PART={"な":"describing",
 /* Words every sentence needs and the curriculum never teaches as vocabulary. */
 const FUNC={"わたし":["I","topic"],"これ":["this","subject"],"それ":["that","subject"],
   "あれ":["that","subject"],"この":["this","pointer"],"その":["that","pointer"],
-  "あの":["that","pointer"],"なん":["what","question word"],"なに":["what","question word"],
-  "どこ":["where","question word"],"だれ":["who","question word"],"いつ":["when","question word"],
-  "なんじ":["what time","question word"],"ひとり":["one person","noun"],
-  "ふたり":["two people","noun"],"さんにん":["three people","noun"],"いちど":["once","time"],
-  "ちょっと":["a moment","adverb"],"すこし":["a little","adverb"],"とても":["very","adverb"],
-  "まいあさ":["every morning","time"],"ここ":["here","place"],"つぎ":["next","noun"]};
+  "あの":["that","pointer"],
+  "どこ":["where","question word"],"いつ":["when","question word"],
+  "なんじ":["what time","question word"],"ひとり":["one person","count"],
+  "ふたり":["two people","count"],"さんにん":["three people","count"],"いちど":["once","time"],
+  "ここ":["here","place"],"つぎ":["next","noun"]};
+/* なに and だれ, ちょっと, すこし, とても and 毎朝 were all in the list above as well as in
+   the curriculum, so every sentence using one parsed twice over with two different
+   glosses and was thrown out as "two readings". A word the course teaches belongs to the
+   course; only what it never teaches belongs here. 何 is taught as なに and read なん in
+   これはなんですか, which is an alias rather than a second word. */
+const ALIAS={"何":["なん"]};
+/* A role a word carries wherever it stands, which its gloss cannot say: 何 and 誰 are
+   question words, and どんな leans on the noun after it the way この does. */
+const ROLE={"何":"question word","誰":"question word","どんな":"pre-noun",
+  /* だから, でも and それから open the second sentence and lean on the first, so they
+     stand without a particle. Unlicensed, それから was read as それ + から and the puzzle
+     lost the very word it was meant to teach. */
+  "だから":"connector","でも":"connector","それから":"connector"};
 
 const lex=new Map();
 const add=(s,e)=>{ e.srf=s; const a=lex.get(s)||[]; a.push(e); lex.set(s,a) };
-W.forEach(w=>forms(w).forEach(f=>add(f.s,{kind:"word",id:"w"+w[0],face:w[0],en:w[3],pos:pos(w),shape:f.shape})));
+W.forEach(w=>forms(w).concat((ALIAS[w[0]]||[]).map(s=>({s,shape:"dict"})))
+  .forEach(f=>add(f.s,{kind:"word",id:"w"+w[0],face:w[0],en:w[3],pos:pos(w),shape:f.shape,role:ROLE[w[0]]})));
 KW.forEach(w=>add(w[0],{kind:"word",id:"v"+w[0],face:w[0],en:w[2],pos:"noun",shape:"dict"}));
 Object.keys(FUNC).forEach(k=>add(k,{kind:"func",face:k,en:FUNC[k][0],role:FUNC[k][1],shape:"dict",pos:"noun"}));
 Object.keys(PART).forEach(p=>add(p,{kind:"part",face:p,role:PART[p],shape:"part"}));
@@ -133,7 +175,9 @@ function parses(body){
 function valid(toks,endShapes){
   if(!toks.length) return false;
   const last=toks[toks.length-1];
-  if(last.kind==="part") return false;
+  /* を ください ends on a particle, and nothing else here does: the ending has to ask
+     for it by name, or every mis-parse that trails a particle becomes a sentence. */
+  if(last.kind==="part"&&!endShapes.includes("part")) return false;
   if(!endShapes.includes(last.shape)) return false;
   if(last.shape==="dict"&&last.kind==="word"&&last.pos==="verb") return false;
   for(let i=0;i<toks.length-1;i++){
@@ -151,7 +195,10 @@ function valid(toks,endShapes){
     /* A noun in front of する is one verb: 勉強 + します is "study". */
     if(nx.kind==="word"&&nx.face==="する"&&t.pos==="noun") continue;
     const licensed=t.pos==="adj"||t.shape==="adv"||BARE.has(t.srf)
-      ||t.role==="pointer"||t.role==="adverb"||t.role==="time";
+      ||t.role==="pointer"||t.role==="adverb"||t.role==="time"
+      /* こどもが さんにん います — a counter hands straight to the verb, and どんな ほん
+         leans on its noun, both without a particle of their own. */
+      ||t.role==="count"||t.role==="pre-noun"||t.role==="connector";
     if(!licensed) return false;
   }
   return true;
@@ -164,9 +211,17 @@ function valid(toks,endShapes){
    puzzles and four times the ambiguity. */
 const TIME=new Set(["いま","きょう","あした","きのう","まいにち","まいあさ","あさ","ひる",
   "よる","こんばん","らいねん","きょねん","ことし","こんしゅう","らいしゅう","せんしゅう",
-  "しゅうまつ","あとで"]);
+  "しゅうまつ","あとで","あと","ごご","ゆうがた","さいきん"]);
 const ADV=new Set(["いちばん","すぐ","もう","まだ","あまり","よく","たくさん","すこし",
-  "とても","ちょっと","また","ゆっくり","はやく","いつも","ときどき"]);
+  "とても","ちょっと","また","ゆっくり","はやく","いつも","ときどき",
+  "ぜんぶ","かならず","もちろん","たぶん","やっぱり","ずっと","まず","いっしょに",
+  /* はじめて was missing, and the cost was not a rejection but a wrong puzzle: with
+     はじめて にほん unlicensed, はじめて|に|ほん|へ|いきます was the only parse left
+     standing, so the round taught 日本 cut in half with ほん glossed "book". An
+     unlicensed adverb does not merely lose sentences — it can hand the prize to a
+     mis-split, which is why the audit for tiles that split a real word is now part of
+     the checker. */
+  "はじめて"]);
 const BARE=new Set([...TIME,...ADV]);
 
 /* The role a word plays is told by the particle after it. */
@@ -178,6 +233,9 @@ function roleOf(t,next,isPred){
   if(t.shape==="te") return "te form";
   if(t.shape==="adv"||ADV.has(t.srf)) return "adverb";
   if(t.pos==="adj") return "adjective";
+  /* きれい and 簡単 are describing words that reach their noun through な. They are nouns
+     grammatically, but "a noun" is not what the tile should say. */
+  if(next&&next.kind==="part"&&next.face==="な") return "adjective";
   if(TIME.has(t.srf)&&next&&next.kind!=="part") return "time";
   if(next&&next.kind==="part") return BY_PART[next.face]||"noun";
   return "noun";
@@ -186,65 +244,97 @@ function roleOf(t,next,isPred){
    VERB" reads as a shape rather than a row of identical letters. */
 const PAT=r=>({topic:"X",subject:"X",object:"X",noun:"B",adjective:"ADJ",verb:"VERB",
   "is / am":"です",place:"X",time:"TIME",person:"X",adverb:"ADV","question word":"",
-  pointer:"","te form":"VERB-\u3066"}[r]);
+  pointer:"","pre-noun":"",count:"N",connector:"","full stop":"\u3002",
+  "please":"ください","going on now":"います","was going on":"いました",
+  "te form":"VERB-\u3066"}[r]);
 
 const made=[], rejected=[];
-Object.keys(U).forEach(k=>{
-  const whole=U[k][0].replace(/。$/,"");
-  const q=/か$/.test(whole);
-  const core=q?whole.slice(0,-1):whole;
+
+/* One clause: the tiles it becomes, or why it cannot become any. A sentence is usually
+   a single clause, and だから, でも and それから join two — those three are the whole
+   reason this is a function rather than the body of the loop. */
+function clause(text,k){
+  const q=/か$/.test(text);
+  const core=q?text.slice(0,-1):text;
   const splits=endSplits(core);
-  if(!splits.length){ rejected.push([k,U[k][0],"no polite ending"]); return }
-  const bySplit=new Map(); const endOf=new Map();
+  if(!splits.length) return {why:"no polite ending"};
+  const bySplit=new Map(), endOf=new Map();
   splits.forEach(([body,e,shapes])=>{
-    parses(body).filter(t=>valid(t,shapes)).filter(t=>t.some(x=>x.face===k)).forEach(t=>{
+    let ok=parses(body).filter(t=>valid(t,shapes));
+    /* The headword pins the parse where the clause contains it. In the second clause of
+       a joined sentence it is simply absent, so requiring it there would reject every
+       one of them. */
+    const withFace=ok.filter(t=>t.some(x=>x.face===k));
+    if(withFace.length) ok=withFace;
+    ok.forEach(t=>{
       const key=t.map(x=>x.srf).join("|")+"+"+e;
       if(!bySplit.has(key)){ bySplit.set(key,[]); endOf.set(key,e) }
       bySplit.get(key).push(t);
     });
   });
-  if(!bySplit.size){ rejected.push([k,U[k][0],"no valid parse"]); return }
+  if(!bySplit.size) return {why:"no valid parse"};
   /* Fewest tiles wins — a whole word beats the same characters in pieces: はなします is
      はなし・ます, not はな・し・ます. This is safe only because the shape rules already
      refuse a dictionary-form verb mid-sentence, which is what made くる・まで・いき cheap
      enough to win on an earlier attempt. A tie is still a rejection. */
   const least=Math.min(...[...bySplit.values()].map(v=>v[0].length));
   [...bySplit.keys()].forEach(key=>{ if(bySplit.get(key)[0].length>least) bySplit.delete(key) });
-  if(bySplit.size>1){ rejected.push([k,U[k][0],"ambiguous: "+[...bySplit.keys()].join("  /  ")]); return }
+  if(bySplit.size>1) return {why:"ambiguous: "+[...bySplit.keys()].join("  /  ")};
   /* One split, but possibly several words that would write it that way. The tiles are
      the same either way; the gloss printed on them is not, so a genuine clash of
      meanings is a rejection rather than a coin toss. */
   const key0=[...bySplit.keys()][0], end=endOf.get(key0);
   const cands=bySplit.get(key0);
   const glosses=new Set(cands.map(t=>t.map(x=>x.en||"").join("|")));
-  if(glosses.size>1){ rejected.push([k,U[k][0],"two readings: "+[...glosses].join("  /  ")]); return }
-  const toks=cands[0];
-
-  /* ます and its family are inflection and ride on the verb, the way the hand-written
-     sentences already do; です is a separable copula and stays its own tile. */
-  const tiles=[];
-  const id=(toks.find(t=>t.kind==="word"&&t.face===k)||{}).id||null;
-  const surf=toks.map(t=>t.srf);
+  if(glosses.size>1) return {why:"two readings: "+[...glosses].join("  /  ")};
+  const toks=cands[0], surf=toks.map(t=>t.srf), tiles=[];
   toks.forEach((t,i)=>{
-    const isPred=i===toks.length-1;
+    /* ます and its family are inflection and ride on the verb, the way the hand-written
+       sentences already do; です is a separable copula, and so are the words in OWN. */
+    /* Where the ending is its own tile, the last token is not the predicate — it is the
+       て form handing on to ください or います, and labelling it "a noun" taught the
+       opposite of the thing the tile exists to show. */
+    const isPred=i===toks.length-1&&!OWN[end];
     const verbish=isPred&&end!=="です"&&end!=="でした";
     const r=verbish?"verb":roleOf(t,toks[i+1],isPred);
     /* "to hold, to carry" is a dictionary gloss; on a tile it reads as "hold, carry". */
     const gloss=t.kind==="part"?"":(t.en||"").replace(/^to /,"").replace(/, to /g,", ");
     tiles.push([verbish?surf[i]+end:surf[i], gloss, r]);
   });
+  if(OWN[end]) tiles.push([end,"",OWN[end]]);
   if(end==="です"||end==="でした") tiles.push([end,"","is / am"]);
   if(q) tiles.push(["か","","question"]);
-  if(tiles.map(t=>t[0]).join("")!==whole){ rejected.push([k,U[k][0],"tiles do not rejoin"]); return }
+  return {tiles,end,toks};
+}
 
+Object.keys(U).forEach(k=>{
+  const whole=U[k][0].replace(/。$/,"");
+  let tiles=[], end=null, toks=[], why=null;
+  whole.split("。").forEach((part,i)=>{
+    if(why)return;
+    const r=clause(part,k);
+    if(r.why){ why=r.why; return }
+    if(i) tiles.push(["。","","full stop"]);
+    tiles=tiles.concat(r.tiles); toks=toks.concat(r.toks); end=end||r.end;
+  });
+  if(why){ rejected.push([k,U[k][0],why]); return }
+  const id=(toks.find(t=>t.kind==="word"&&t.face===k)||{}).id||null;
+  if(!id){ rejected.push([k,U[k][0],"the sentence never names its own word"]); return }
+  if(tiles.map(t=>t[0]).join("")!==whole){ rejected.push([k,U[k][0],"tiles do not rejoin"]); return }
   /* A single tile is not a puzzle — there is no order to get right. */
   if(tiles.length<2){ rejected.push([k,U[k][0],"only one tile, nothing to order"]); return }
 
-  /* The note is the sentence's own teaching note where it has one, otherwise the
-     particle it turns on, otherwise what its ending does. */
-  const [enRaw,noteRaw]=U[k][1].split(" — ");
+  /* The note is the sentence's own teaching note where it has one. Otherwise it is
+     whatever the sentence turns on: a separable ending like ください is the lesson where
+     there is one, then the particle, then what the ending does. */
+  /* The English and its teaching note are separated by an em dash, and a note may
+     contain one of its own — so everything after the first dash is the note. */
+  const [enRaw,...noteParts]=U[k][1].split(" — ");
+  const noteRaw=noteParts.join(" — ");
   const partIn=tiles.map(t=>t[0]).find(s=>P[s]);
-  const note=noteRaw||P[partIn]||END_NOTE[end]||P["です"];
+  const conn=tiles.find(t=>t[2]==="connector");
+  const note=noteRaw||(conn&&CONN_NOTE[conn[0]])||(OWN[end]&&ownNote(end,tiles))
+    ||P[partIn]||END_NOTE[end]||P["です"];
   const pattern=tiles.map(t=>PART[t[0]]?t[0]:(t[2]==="pointer"||t[2]==="question word"?t[0]:PAT(t[2])||t[0]))
     .filter(Boolean).join(" ");
   made.push({id,en:enRaw.trim(),pattern,note,tiles});
