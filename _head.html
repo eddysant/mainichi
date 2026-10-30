@@ -274,6 +274,12 @@ h2{font-size:1.125rem;line-height:1.35}
 .row .l{font-family:var(--ja);font-size:1.0625rem;min-width:0}
 .row .r{color:var(--ink-soft);min-width:0}
 .row .r i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
+.row.gl{cursor:pointer}
+.row.gl:hover .r{color:var(--ink)}
+.gl-det{padding:.1rem 0 .55rem;border-bottom:1px solid var(--line);font-size:.8125rem;
+  color:var(--ink-soft);line-height:1.6}
+.gl-det .ja{display:block;font-family:var(--ja);font-size:1rem;color:var(--ink)}
+.gl-det i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
 .sent{font-family:var(--ja);font-size:1.125rem;line-height:1.6}
 .foot{text-align:center;font-size:.75rem;color:var(--ink-faint);line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -299,6 +305,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="hr"></div>
     <ul class="plan" id="plan"></ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
+    <div class="btn-row"><button class="btn quiet" id="glOpen">Everything I’ve met</button></div>
   </section>
 
   <!-- round 1: grouping -->
@@ -321,7 +328,9 @@ h2{font-size:1.125rem;line-height:1.35}
     </div>
     <p class="note" id="tEn"><b>water</b></p>
     <p class="note ex" id="tEx" hidden></p>
+    <p class="note" id="tDirs"></p>
     <button class="btn" id="tNext">Got it</button>
+    <div class="btn-row"><button class="btn quiet" id="tLook" hidden>Everything I’ve met</button></div>
   </section>
 
   <!-- round 2: recall -->
@@ -387,6 +396,16 @@ h2{font-size:1.125rem;line-height:1.35}
     <button class="btn" id="xDone" hidden>See today’s card</button>
   </section>
 
+  <!-- everything met, browsable -->
+  <section class="card" id="sc-gloss" hidden>
+    <div><div class="eyebrow">Reference</div><h2>Everything you’ve met</h2></div>
+    <p class="note" id="glNote"></p>
+    <div class="hr"></div>
+    <div class="recap" id="glBody"></div>
+    <div class="hr"></div>
+    <button class="btn" id="glBack">Back</button>
+  </section>
+
   <!-- done -->
   <section class="card" id="sc-done" hidden>
     <div class="eyebrow" id="dEyebrow">Done for today</div>
@@ -399,6 +418,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div id="dUseBlock" hidden><h3>In use</h3><div class="rows" id="dUseRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
       <div id="dWroteBlock" hidden><h3>Written and heard</h3><div class="rows" id="dWroteRows"></div></div>
+      <div id="dMissBlock" hidden><h3>Missed today</h3><div class="rows" id="dMissRows"></div></div>
       <div id="dCatchBlock" hidden><h3>Caught up</h3><div class="rows" id="dCatchRows"></div></div>
       <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
     </div>
@@ -415,7 +435,7 @@ h2{font-size:1.125rem;line-height:1.35}
       </div>
     </div>
     <div class="hr"></div>
-    <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button></div>
+    <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button><button class="btn quiet" id="glOpen2">Everything I’ve met</button></div>
     <p class="foot" id="dFoot"></p>
   </section>
 

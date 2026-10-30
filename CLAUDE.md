@@ -30,8 +30,9 @@ Two live targets: **https://eddysant.github.io/mainichi/** and the private Claud
 artifact **https://claude.ai/artifact/FwKif2pUHtcNjvyPJiaiWb**. Both need republishing.
 
 The content set carries 46 hiragana, 46 katakana, 75 katakana loanwords, 415 words,
-25 hand-written sentences, 490 generated sentence puzzles and 28 grouping puzzles —
-415 days of new material before it becomes review-only.
+25 hand-written sentences, 490 generated sentence puzzles and 28 grouping puzzles: 582
+items on the four streams. How long that lasts is no longer a division — intake follows
+the review backlog, so it is years, not 415 days. See *Capacity* below.
 
 ## Item ids, and why the curriculum can be edited
 
@@ -61,25 +62,88 @@ always taught before it is shown. Anchoring by topic instead put 浴びる on da
 ## How the schedule works
 
 Lessons advance by *plays*, not by calendar date, so a missed day never skips material —
-it only breaks the streak. Review gaps are 1, 1, 2, 4, 8, 16, 32, 64, 120 plays; a wrong
-answer drops the item back to the first gap. Schedule entries are `{box, due, seen}` —
-the field is `box`, never `b`.
+it only breaks the streak. Review gaps are 1, 1, 2, 4, 8, 16, 32, 64, 120 plays. Schedule
+entries are `{box, due, seen}` — the field is `box`, never `b`. `seen` counts *cold*
+answers only, which is what makes it usable as "met on an earlier day": the check that a
+new item's card was read does not raise it.
+
+**A miss drops two boxes; a soft miss, one. Neither resets to the start** — and this is
+load-bearing, not kindness. Resetting to box 0 meant reaching the last gap took eight
+consecutive passes, which at any real accuracy never happens, so items churned forever in
+the one-to-four-play boxes. Each one then demanded a review every couple of days, and the
+demand summed past what the round could ask. See the next section.
 
 A word can come up three times in one run once all five rounds are open — recall, writing
 and listening — so an item is graded only once per run, and a later failure overrides an
-earlier pass. Failing to *write* a word you recognised is the truer signal.
+earlier pass. Failing to *write* a word you recognised is the truer signal. The catch-up
+round grades softly because six seconds is not long enough for a blank to mean the word
+is gone.
 
-The catch-up round is the one exception to a miss resetting an item: it grades softly,
-one box back instead of to the start. Six seconds is not long enough for a blank to mean
-the word is gone.
-
-Each day introduces the lowest item of each stream not yet seen — one hiragana, one
-katakana, one loanword, one kanji word. Taking the lowest unseen item rather than the one
-at the lesson index means a stream added part-way through starts at the beginning rather
-than skipping to wherever the learner had got to.
+Each day introduces the lowest item of each stream not yet seen. Taking the lowest unseen
+item rather than the one at the lesson index means a stream added part-way through starts
+at the beginning rather than skipping to wherever the learner had got to. On a day when
+intake is throttled it is the streams with the fewest items so far that advance, or a
+stream would starve for as long as the debt lasted.
 
 Hiragana has no word stream of its own because it already has one: the kanji words are
 drilled in both directions, and the reading direction is hiragana.
+
+## Capacity: why intake follows the backlog
+
+**The schedule used to compute due dates the round had no capacity to honour, which is
+the same as having no schedule.** Four new items a day, eight question slots, two per
+stream: the new ones took four slots and the other four had to cover everything ever
+learned. Measured over 180 simulated days, it did not fall behind so much as diverge —
+
+| day | met | due | asked | dropped | worst overdue |
+| --- | --- | --- | --- | --- | --- |
+| 14 | 56 | 50 | 8 | 46 | 5 plays |
+| 30 | 120 | 113 | 8 | 109 | 13 plays |
+| 180 | 347 | 310 | 8 | 303 | 88 plays |
+
+An item met once on a card and next asked three months later cannot be answered, only
+guessed — and the guess then drove the schedule, so a lucky one pushed the word further
+out. That is the whole of "it's a lot of trial and error".
+
+Three things hold it now, and all three are needed:
+
+- **Intake follows the debt**, not the calendar: four new items while the backlog is under
+  `EASE_AT`, two under `STOP_AT`, none above it. The start card says so in words, because
+  a day that silently stops teaching looks broken.
+- **The round grows when there is debt**, `SLOT_MIN` to `SLOT_MAX` questions.
+- **Fill is by most-overdue globally**, after one guaranteed slot per stream. A flat two
+  per stream kept the day a tidy shape and made the backlog undrainable: a stream behind
+  by thirty could not borrow a slot from a stream that was straight.
+
+The result is a bounded queue — backlog flat around 20, and **nothing more than a
+fortnight past its date**, against 375 such items on the old rules. The cost is honest and
+should not be "fixed" by loosening the gate: new material arrives at roughly 1–1.5 items a
+day in the long run rather than four, so the curriculum takes years rather than 415 days.
+That is the real rate at which a 90-second round can teach something and keep it taught.
+The old four-a-day reached 567 items met by day 400 with 435 of them overdue; this reaches
+~360 with none rotting.
+
+## Teach before testing
+
+Three rules, each fixing a measured way the round tested what it had never taught:
+
+- **A new item's card names both directions it will be asked in.** 28% of all questions
+  used to be the first time that direction had ever come up — a word met as a meaning,
+  asked the next day for its reading. Saying so is not a hint; it is the difference
+  between being tested and being ambushed.
+- **The same-run question after a card does not move the schedule.** The card was ten
+  seconds ago, so it is a check the card was read, not a memory of it. It still scores.
+  The item joins the schedule in `teach()`, due tomorrow, and `quiz()` marks the question
+  `fresh`; the first real test is the next day, in the same direction the card showed.
+- **A miss opens the item's card and waits.** It used to show the right answer for 1.9
+  seconds and move on, which is the shape of a test and not of a lesson. The item then
+  comes round once more before the round ends — not scored and not graded again, since
+  the miss already counted.
+
+`renderGloss()` is the reference that did not exist: everything met, by stream, each row
+opening to its sentence and next review. It is reachable from the start card, the done
+card and a miss. It lists **met items only** — the whole curriculum would be a spoiler,
+and a word's sentence uses words not yet taught.
 
 ## Example sentences
 

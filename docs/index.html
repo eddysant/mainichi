@@ -299,6 +299,12 @@ h2{font-size:1.125rem;line-height:1.35}
 .row .l{font-family:var(--ja);font-size:1.0625rem;min-width:0}
 .row .r{color:var(--ink-soft);min-width:0}
 .row .r i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
+.row.gl{cursor:pointer}
+.row.gl:hover .r{color:var(--ink)}
+.gl-det{padding:.1rem 0 .55rem;border-bottom:1px solid var(--line);font-size:.8125rem;
+  color:var(--ink-soft);line-height:1.6}
+.gl-det .ja{display:block;font-family:var(--ja);font-size:1rem;color:var(--ink)}
+.gl-det i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
 .sent{font-family:var(--ja);font-size:1.125rem;line-height:1.6}
 .foot{text-align:center;font-size:.75rem;color:var(--ink-faint);line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -324,6 +330,7 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="hr"></div>
     <ul class="plan" id="plan"></ul>
     <button class="btn seal" id="go">Start today’s puzzle</button>
+    <div class="btn-row"><button class="btn quiet" id="glOpen">Everything I’ve met</button></div>
   </section>
 
   <!-- round 1: grouping -->
@@ -346,7 +353,9 @@ h2{font-size:1.125rem;line-height:1.35}
     </div>
     <p class="note" id="tEn"><b>water</b></p>
     <p class="note ex" id="tEx" hidden></p>
+    <p class="note" id="tDirs"></p>
     <button class="btn" id="tNext">Got it</button>
+    <div class="btn-row"><button class="btn quiet" id="tLook" hidden>Everything I’ve met</button></div>
   </section>
 
   <!-- round 2: recall -->
@@ -412,6 +421,16 @@ h2{font-size:1.125rem;line-height:1.35}
     <button class="btn" id="xDone" hidden>See today’s card</button>
   </section>
 
+  <!-- everything met, browsable -->
+  <section class="card" id="sc-gloss" hidden>
+    <div><div class="eyebrow">Reference</div><h2>Everything you’ve met</h2></div>
+    <p class="note" id="glNote"></p>
+    <div class="hr"></div>
+    <div class="recap" id="glBody"></div>
+    <div class="hr"></div>
+    <button class="btn" id="glBack">Back</button>
+  </section>
+
   <!-- done -->
   <section class="card" id="sc-done" hidden>
     <div class="eyebrow" id="dEyebrow">Done for today</div>
@@ -424,6 +443,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div id="dUseBlock" hidden><h3>In use</h3><div class="rows" id="dUseRows"></div></div>
       <div><h3>Next review</h3><div class="rows" id="dDueRows"></div></div>
       <div id="dWroteBlock" hidden><h3>Written and heard</h3><div class="rows" id="dWroteRows"></div></div>
+      <div id="dMissBlock" hidden><h3>Missed today</h3><div class="rows" id="dMissRows"></div></div>
       <div id="dCatchBlock" hidden><h3>Caught up</h3><div class="rows" id="dCatchRows"></div></div>
       <div><h3>The sentence</h3><p class="sent" id="dSent"></p><p class="note" id="dSentEn"></p><p class="note" id="dSentWhy"></p></div>
     </div>
@@ -440,7 +460,7 @@ h2{font-size:1.125rem;line-height:1.35}
       </div>
     </div>
     <div class="hr"></div>
-    <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button></div>
+    <div class="btn-row"><button class="btn quiet" id="again">Practise again (no score)</button><button class="btn quiet" id="glOpen2">Everything I’ve met</button></div>
     <p class="foot" id="dFoot"></p>
   </section>
 
@@ -3167,7 +3187,7 @@ const LEGACY_ORDER = {
 (function(){
 const $=id=>document.getElementById(id);
 const SCREENS=["sc-start","sc-group","sc-teach","sc-recall","sc-build",
-  "sc-unlock","sc-write","sc-listen","sc-bonus","sc-done"];
+  "sc-unlock","sc-write","sc-listen","sc-bonus","sc-done","sc-gloss"];
 const show=id=>SCREENS.forEach(s=>{$(s).hidden=(s!==id)});
 const DAY=864e5;
 const dstr=d=>d.toLocaleDateString("en-CA");
@@ -3193,7 +3213,6 @@ const SCRIPTS=[
   ["v","katakana word",KATA_WORDS],
   ["w","kanji",WORDS]
 ];
-const PER_SCRIPT=2;
 /* ---- item ids ----
    An id is the item itself — "w水", not "w0". Array positions made the curriculum
    append-only: inserting a word shifted every id after it, so every saved review
@@ -3218,14 +3237,40 @@ const loanItem=i=>({id:"v"+i,type:"loanword",script:"katakana word",set:KATA_WOR
 const usageFor=it=>(typeof USAGE==="object"&&USAGE[it.face])||null;
 const item=id=>{const n=orderOf(id);
   return id[0]==="k"?kanaItem(n):id[0]==="t"?kataItem(n):id[0]==="v"?loanItem(n):wordItem(n)};
+/* ---- how much a day can carry ----
+   Review gaps are counted in plays, so every item taught lays a standing demand on the
+   round. Four a day entering at the first gap need roughly eleven reviews a day between
+   them just to climb out of the low boxes, against the four slots left over once the new
+   ones have taken theirs. The queue did not fall behind, it diverged: by day 180, 310
+   items were due, 8 were asked, and the oldest was 88 plays overdue. The schedule was
+   computing dates the round had no capacity to honour, which is the same as having no
+   schedule — and an item first seen on one card and next asked three months later cannot
+   be answered, only guessed.
+   So intake follows the debt rather than the calendar, and the round grows a little when
+   there is debt to clear. Taught slower, everything taught stays answerable: nothing now
+   goes more than a fortnight past its date. */
+const backlogAt=n=>Object.keys(P.srs).filter(id=>known(id)&&P.srs[id].due<=n).length;
+const EASE_AT=8, STOP_AT=20, SLOT_MIN=8, SLOT_MAX=12;
+const intakeFor=bl=>bl>=STOP_AT?0:bl>=EASE_AT?2:4;
+const slotsFor=bl=>Math.min(SLOT_MAX,SLOT_MIN+2*Math.floor(bl/EASE_AT));
 /* The lowest item of each script not yet introduced, rather than the one at the
    lesson index: that way adding katakana part-way through does not skip ア onwards,
    and a schedule that drifts for any other reason heals itself. */
-function newToday(){
-  return SCRIPTS.map(([p,,set])=>{
+function newToday(at){
+  const plays=at==null?(P.plays||0):at;
+  const avail=SCRIPTS.map(([p,,set])=>{
     for(let i=0;i<set.length;i++){ const id=idOf(p,i); if(!P.srs[id])return id }
     return null;
-  }).filter(Boolean);
+  });
+  const there=avail.filter(Boolean), take=intakeFor(backlogAt(plays));
+  if(take>=there.length)return there;
+  /* On a reduced day, the streams that have had the least. Taking the first two in
+     SCRIPTS order instead would starve katakana words and kanji for as long as the
+     debt lasted, and all four are meant to advance. */
+  const got=p=>Object.keys(P.srs).filter(id=>id[0]===p).length;
+  return SCRIPTS.map(([p],i)=>[p,i]).filter(([,i])=>avail[i])
+    .sort((a,b)=>got(a[0])-got(b[0])||a[1]-b[1])
+    .slice(0,take).map(([,i])=>avail[i]);
 }
 
 /* ---- the run's rounds ----
@@ -3241,7 +3286,7 @@ const ROUNDS=[
   {key:"group", day:1,  ja:"一", name:"Find the thread",
    blurb:"Five words appear one at a time — say what they share."},
   {key:"recall",day:1,  ja:"二", name:"Recall",
-   blurb:"Two each of hiragana, katakana, katakana words and kanji — today’s new ones and what’s due."},
+   blurb:"Today’s new ones and whatever is due — longest on the days you are behind."},
   {key:"build", day:1,  ja:"三", name:"Build a sentence",
    blurb:"Tap the words into order."},
   {key:"write", day:1, ja:"四", name:"Write it from memory",
@@ -3349,12 +3394,16 @@ function dueIdsAt(n){return Object.keys(P.srs).filter(k=>P.srs[k].due<=n).sort((
    three times, flipping the question direction. One grade per item per run, and a later
    failure overrides an earlier pass: failing to write a word you recognised is the
    truer signal.
-   A soft miss — the catch-up round, where the clock is the hard part — nudges an item
-   back one box instead of all the way to the start: six seconds is not enough time for
-   failing to answer to mean the word is gone. */
+   A miss drops the item two boxes; a soft miss — the catch-up round, where the clock is
+   the hard part — only one, because six seconds is not enough time for failing to answer
+   to mean the word is gone. Neither sends it back to the start. Resetting to box 0 was
+   the arithmetic that broke the schedule: reaching the last gap took eight consecutive
+   passes, which at any real accuracy never happens, so items churned forever in the
+   one-to-four-play boxes and the queue grew without bound. Dropping back a couple of
+   boxes re-tests a lapse within days while leaving an item its history. */
 function grade(id,ok,soft){
   const s=P.srs[id]||(P.srs[id]={box:0,due:0,seen:0});
-  const down=()=>{s.box=soft?Math.max(0,(s.box||0)-1):0};
+  const down=()=>{s.box=Math.max(0,(s.box||0)-(soft?1:2))};
   if(run){
     run.graded=run.graded||{};
     const prev=run.graded[id];
@@ -3489,6 +3538,49 @@ function mkQ(id){
     after:it.face+" = "+it.kana+" ("+it.romaji+") — "+it.en};
 }
 
+/* ---- everything you have met ----
+   There was no way to look anything up. Forget a character and the only route back to
+   it was waiting for the round to offer it again and guessing in the meantime, which is
+   most of what makes the day feel like trial and error rather than study. The list is
+   reachable without starting a run, from the done card, and from a miss.
+   It shows what is on the schedule — met items only. Showing the whole curriculum would
+   turn a reference into a spoiler, and the sentence under a word uses words that have
+   not been taught yet. */
+function renderGloss(back){
+  show("sc-gloss");
+  const met=Object.keys(P.srs).filter(known);
+  $("glNote").textContent=met.length
+    ? met.length+(met.length===1?" item":" items")+" so far. Tap any one to see it again."
+    : "Nothing yet — the first four arrive on day one.";
+  const host=$("glBody"); host.innerHTML="";
+  SCRIPTS.forEach(([p,script])=>{
+    const ids=met.filter(id=>id[0]===p).sort((a,b)=>orderOf(a)-orderOf(b));
+    if(!ids.length)return;
+    const sec=document.createElement("div");
+    const h=document.createElement("h3");
+    h.textContent=script+" · "+ids.length;
+    sec.appendChild(h);
+    const rows=document.createElement("div"); rows.className="rows";
+    ids.forEach(id=>{
+      const it=item(id), s=P.srs[id], ex=usageFor(it);
+      const d=document.createElement("div"); d.className="row gl";
+      const a=document.createElement("div"); a.className="l"; a.textContent=it.face;
+      const b=document.createElement("div"); b.className="r";
+      b.innerHTML=esc(it.en)+" <i>"+esc(it.kana&&it.kana!==it.face?it.kana+" · "+it.romaji:it.romaji)+"</i>";
+      d.appendChild(a); d.appendChild(b);
+      const det=document.createElement("div"); det.className="gl-det"; det.hidden=true;
+      const gap=Math.max(0,(s.due||0)-(P.plays||0));
+      det.innerHTML=(ex?'<span class="ja">'+esc(ex[0])+"</span>"+esc(ex[1])+"<br>":"")
+        +"<i>"+(gap===0?"due now":"due in "+gap+(gap===1?" day":" days"))
+        +" · box "+((s.box||0)+1)+" of "+IV.length+"</i>";
+      d.onclick=()=>{det.hidden=!det.hidden};
+      rows.appendChild(d); rows.appendChild(det);
+    });
+    sec.appendChild(rows); host.appendChild(sec);
+  });
+  $("glBack").onclick=back;
+}
+
 /* ---- chrome ---- */
 function buildPips(n){
   const box=$("pips"); box.innerHTML="";
@@ -3562,8 +3654,10 @@ function renderStart(){
   const n=P.lesson+1;
   $("dayN").textContent=n;
   $("dayJa").textContent="第"+jaNum(n)+"日";
-  const nw=newToday(), newN=nw.length;
-  const qn=quizIdsFor(nw,(P.plays||0)+1).length;
+  const at=(P.plays||0)+1;
+  const nw=newToday(at), newN=nw.length;
+  const qn=quizIdsFor(nw,at).length;
+  const bl=backlogAt(at), left=SCRIPTS.some(([p,,set])=>!P.srs[idOf(p,set.length-1)]);
   let line;
   const nr=roundsFor(n).length+(recapDay(n)||flashDay(n)?1:0);
   const head=["","One round","Two rounds","Three rounds","Four rounds","Five rounds","Six rounds"][nr]
@@ -3571,6 +3665,8 @@ function renderStart(){
            "two and a half minutes","three minutes"][nr]+". ";
   if(P.plays===0) line=head+"A hiragana, a katakana, a loanword and a kanji word to start.";
   else if(newN) line=head+newN+" new, "+qn+" to recall.";
+  else if(left) line=head+qn+" to recall. Nothing new today — "+bl
+    +" are waiting for review, and new material resumes once that is down.";
   else line=head+qn+" to recall — no new characters left.";
   $("startLine").textContent=line;
   const fn=$("freezeLine");
@@ -3694,11 +3790,17 @@ function r1(){
 function teach(){
   const ids=run.newIds.filter(id=>!P.srs[id]);
   if(!ids.length)return quiz();
+  /* Being taught is the event that puts an item on the schedule, so the entry is
+     written here rather than by the first grading. That way the round that follows can
+     leave the schedule alone: see quiz(). */
+  run.fresh={};
+  ids.forEach(id=>{ P.srs[id]={box:0,due:(P.plays||0)+IV[0],seen:0}; run.fresh[id]=1 });
   let i=0;
   (function one(){
     if(i>=ids.length)return quiz();
     const it=item(ids[i]);
     show("sc-teach"); pip(run.step,"live");
+    $("tNext").hidden=false; $("tLook").hidden=true;
     $("tBadge").textContent="New today · "+it.script
       +(ids.length>1?" ("+(i+1)+" of "+ids.length+")":"");
     $("tBig").textContent=it.face;
@@ -3711,31 +3813,77 @@ function teach(){
     const ex=usageFor(it);
     $("tEx").hidden=!ex;
     if(ex)$("tEx").innerHTML='<span class="ja">'+esc(ex[0])+'</span>'+esc(ex[1]);
+    /* Both directions, named. The round asks a character for its sound and then its
+       sound for the character, and a word for its meaning and then its reading — and
+       the second of each used to arrive cold, with nothing having ever shown it that
+       way round. 28% of all questions were the first time that direction had been
+       asked. Saying so is not a hint: it is the difference between being tested and
+       being ambushed. */
+    $("tDirs").textContent=it.type==="char"
+      ? "Asked both ways: which sound this is, and which "+it.script+" a sound is."
+      : it.type==="loanword"||it.face===it.kana
+        ? "Asked both ways: what it means, and which word a meaning is."
+        : "Asked both ways: what it means, and how it is read.";
     $("tNext").textContent=i<ids.length-1?"Next":"Try it";
     $("tNext").onclick=()=>{i++;one()};
   })();
 }
 
-/* ---- round 2: recall ---- */
-/* Two of each script, every day. New material first, then whatever is due, then
-   older items of that script to fill — so the round keeps its shape even on a day
-   when nothing of a given script happens to come up for review. */
+/* ---- a miss, looked at properly ----
+   A wrong answer used to show the right one for 1.9 seconds and move on, which is the
+   shape of a test and not of a lesson: the item then left the screen until tomorrow at
+   the earliest, and there was nowhere to go and nothing to read. The same card the item
+   was taught from comes back instead, with the sentence, and it waits to be dismissed. */
+function lookAgain(id,next,last){
+  const it=item(id);
+  show("sc-teach");
+  $("tBadge").textContent="Look again · "+it.script;
+  $("tBig").textContent=it.face;
+  $("tSub").textContent=it.kana; $("tSub").hidden=!it.kana;
+  $("tLat").textContent=it.romaji;
+  $("tEn").innerHTML="<b>"+esc(it.en)+"</b>"+(it.note?" · "+esc(it.note):"");
+  const ex=usageFor(it);
+  $("tEx").hidden=!ex;
+  if(ex)$("tEx").innerHTML='<span class="ja">'+esc(ex[0])+'</span>'+esc(ex[1]);
+  $("tDirs").textContent=last
+    ? "It comes back sooner than it would have, and it is in the list below."
+    : "It comes round again before the end of today.";
+  $("tNext").hidden=false; $("tNext").textContent="Got it";
+  $("tNext").onclick=next;
+  $("tLook").hidden=false;
+  $("tLook").onclick=()=>renderGloss(()=>lookAgain(id,next));
+}
+
+/* ---- round 2: recall ----
+   New material first, then the most overdue, and the round is as long as the debt
+   needs. A flat two per stream kept the day a tidy shape and made the backlog
+   undrainable: a stream behind by thirty items could not borrow a slot from a stream
+   that was straight, so both stayed where they were. One slot per stream is enough to
+   keep the day varied; the rest goes where it is owed. */
 function quizIdsFor(nw,plays){
-  const due=dueIdsAt(plays), out=[];
+  const slots=slotsFor(backlogAt(plays)), out=nw.slice(0,slots);
+  const due=dueIdsAt(plays).filter(id=>known(id)&&out.indexOf(id)<0);
   SCRIPTS.forEach(([p])=>{
-    const take=[], add=id=>{if(id[0]===p&&take.indexOf(id)<0&&take.length<PER_SCRIPT)take.push(id)};
-    nw.forEach(add);
-    due.forEach(add);
-    if(take.length<PER_SCRIPT)shuffle(Object.keys(P.srs).filter(id=>id[0]===p)).forEach(add);
-    out.push.apply(out,take);
+    if(out.length>=slots)return;
+    const first=due.find(id=>id[0]===p&&out.indexOf(id)<0);
+    if(first)out.push(first);
   });
+  due.forEach(id=>{ if(out.length<slots&&out.indexOf(id)<0)out.push(id) });
+  /* Nothing due and nothing new — early days, or a run after a clean sweep. */
+  if(out.length<slots)shuffle(Object.keys(P.srs).filter(known))
+    .forEach(id=>{ if(out.length<slots&&out.indexOf(id)<0)out.push(id) });
   return out;
 }
 function quiz(){
   const ids=quizIdsFor(run.newIds,P.plays);
   run.dueIds=ids.filter(id=>run.newIds.indexOf(id)<0);
-  run.qs=shuffle(ids).map(mkQ);
-  run.r2max=run.qs.length; run.qi=0;
+  /* A question on an item whose card was ten seconds ago is a check the card was read,
+     not a memory of it. It still scores — it is a real question — but it must not move
+     the schedule, because a pass here would push the item from tomorrow out to the
+     second gap before it had ever been asked cold. */
+  run.qs=shuffle(ids).map(id=>{const q=mkQ(id); q.fresh=!!(run.fresh||{})[id]; return q});
+  run.r2max=run.qs.length; run.r2n=run.qs.length; run.qi=0;
+  run.retry=[]; run.retried=false;
   if(!run.qs.length){pip(run.step,"done");return nextStep()}
   nextQ();
 }
@@ -3746,19 +3894,33 @@ function rFlash(){
   const ids=flashIds(FLASH_N);
   if(!ids.length){pip(run.step,"done");return nextStep()}
   run.mode="flash"; run.qs=ids.map(mkQ); run.qi=0; run.flashN=ids.length;
+  run.r2n=ids.length; run.retry=[]; run.retried=false;
   nextQ();
 }
 function nextQ(){
   const flash=run.mode==="flash";
   if(run.qi>=run.qs.length){
-    pip(run.step,"done");
-    if(flash)run.mode=null;
-    return nextStep();
+    /* Everything missed comes round once more before the round ends — the one place a
+       second look costs nothing and is worth everything. Not scored and not graded
+       again: the miss already counted, and this is the practice the miss earned.
+       Once only, or a bad day would never end. */
+    if(!run.retried&&run.retry.length){
+      run.retried=true;
+      run.qs=run.qs.concat(run.retry.map(q=>
+        Object.assign({},q,{opts:shuffle(q.opts),retry:true})));
+      run.retry=[];
+    }
+    if(run.qi>=run.qs.length){
+      pip(run.step,"done");
+      if(flash)run.mode=null;
+      return nextStep();
+    }
   }
   const q=run.qs[run.qi], box=$("rOpts");
   show("sc-recall"); pip(run.step,"live");
-  $("rEyebrow").textContent=(flash?"Flashback · ":"Round two · recall ")
-    +(run.qi+1)+" of "+run.qs.length;
+  $("rEyebrow").textContent=q.retry
+    ? "One more look · "+(run.qi+1-run.r2n)+" of "+(run.qs.length-run.r2n)
+    : (flash?"Flashback · ":"Round two · recall ")+(run.qi+1)+" of "+run.r2n;
   $("rQ").textContent=q.q;
   $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"")+(q.gloss?" gloss":"");
   $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
@@ -3778,9 +3940,11 @@ function nextQ(){
         else if(x===b)x.classList.add("wrong");
         else x.classList.add("dim");
       });
-      if(ok)flash?run.flashGot++:run.r2++;
-      /* No clock here, so a miss is a real one and grades like any other. */
-      if(run.scored)grade(q.id,ok);
+      if(ok&&!q.retry)flash?run.flashGot++:run.r2++;
+      /* No clock here, so a miss is a real one and grades like any other — except on
+         the two kinds of question that are not tests of memory: the check that a new
+         item's card was read, and the second look at something already marked wrong. */
+      if(run.scored&&!q.fresh&&!q.retry)grade(q.id,ok);
       $("rNote").className="note "+(ok?"good":"bad");
       $("rNote").textContent=q.after;
       /* The whole point of a look back is seeing the word do its job again. */
@@ -3790,7 +3954,11 @@ function nextQ(){
         d.className="ja"; d.textContent=" "+ex[0];
         $("rNote").appendChild(d);
       }
-      setTimeout(()=>{run.qi++;nextQ()},ok?750:1900);
+      if(ok)return setTimeout(()=>{run.qi++;nextQ()},750);
+      /* Long enough to see which one was right, then the card, which waits. */
+      if(!q.retry)run.retry.push(q);
+      (run.missed=run.missed||[]).indexOf(q.id)<0&&run.missed.push(q.id);
+      setTimeout(()=>lookAgain(q.id,()=>{run.qi++;nextQ()},!!q.retry),1100);
     };
     box.appendChild(b);
   });
@@ -3812,7 +3980,12 @@ function sentFor(ref){
 }
 function pickSent(l){
   if(l<SENTENCES.length) return handRef(l);
-  const done=P.b3||(P.b3=[]), met=b=>P.srs[b.id];
+  /* An item joins the schedule when its card is shown, so "has an entry" no longer
+     means "met on an earlier day" — a word taught this morning would now qualify and
+     turn the round from consolidation into a preview. The first cold answer is what
+     counts, and `seen` is exactly that: the same-run check of a new card does not
+     raise it. */
+  const done=P.b3||(P.b3=[]), met=b=>(P.srs[b.id]||{}).seen>0;
   let pool=bPool().filter(b=>met(b)&&done.indexOf(b.id)<0);
   /* Everything available has been played: start the cycle again rather than stop. */
   if(!pool.length){ P.b3=[]; pool=bPool().filter(met); }
@@ -3934,12 +4107,18 @@ const SMALL={"あ":"ぁ","い":"ぃ","う":"ぅ","え":"ぇ","お":"ぉ","つ":"
 const WRITE_N=1;
 
 function writeIds(){
-  const known=Object.keys(P.srs).filter(id=>id[0]==="w");
-  const due=dueIdsAt(P.plays).filter(id=>id[0]==="w");
+  /* Spelled from memory with nothing on screen, so an earlier day's word is the one
+     worth asking: `seen` counts cold answers, and a card shown this morning has not
+     earned one yet. On day one nothing has, and the round exists from day one, so
+     today's word stands in rather than the round quietly not happening. */
+  const all=Object.keys(P.srs).filter(id=>id[0]==="w");
+  const older=all.filter(id=>P.srs[id].seen>0);
+  const mine=older.length?older:all;
+  const due=dueIdsAt(P.plays).filter(id=>mine.indexOf(id)>=0);
   const out=[];
   const add=id=>{if(out.indexOf(id)<0&&out.length<WRITE_N)out.push(id)};
   due.forEach(add);
-  shuffle(known).forEach(add);
+  shuffle(mine).forEach(add);
   return out;
 }
 
@@ -4172,8 +4351,12 @@ function soundalikes(kana,n){
   return metFirst(cands,n,o=>soundScore(kana)(o.row)).map(o=>o.row);
 }
 function listenIds(){
-  const known=Object.keys(P.srs).filter(id=>id[0]==="w");
-  return pick(known,Math.min(LISTEN_N,known.length));
+  /* Heard once, with no writing on screen — an earlier day's word, for the same reason
+     the write round takes one. */
+  const all=Object.keys(P.srs).filter(id=>id[0]==="w");
+  const older=all.filter(id=>P.srs[id].seen>0);
+  const mine=older.length?older:all;
+  return pick(mine,Math.min(LISTEN_N,mine.length));
 }
 function r5(){
   if(!jaVoice()){
@@ -4406,7 +4589,7 @@ async function finish(){
            flashGot:run.flashGot||0,flashN:run.flashN||0,
            max:5+run.r2max+3+(run.r4max||0)+(run.r5max||0)+(run.r6max||0),
            gIdx:run.gIdx,sRef:run.sRef,newIds:run.newIds,dueIds:run.dueIds,
-           wIds:run.wIds||[],lIds:run.lIds||[],cIds:run.cIds||[],
+           wIds:run.wIds||[],lIds:run.lIds||[],cIds:run.cIds||[],missed:run.missed||[],
            rounds:run.plan.length,noVoice:!!run.noVoice};
   const scored=run.scored;
   if(scored){
@@ -4481,6 +4664,15 @@ function renderDone(r,scored){
       return [it.face,esc(it.kana)+" <i>"+esc(it.romaji)+"</i>"];
     }));
   }
+  /* The day ended without ever saying what went wrong: the score said 11 of 14 and
+     the three were never named. They are the only part of the card worth reading
+     twice. */
+  const missed=(r.missed||[]).filter(known);
+  $("dMissBlock").hidden=!missed.length;
+  rowsInto($("dMissRows"),missed.map(id=>{
+    const it=item(id);
+    return [it.face,esc(it.en)+" <i>"+esc(it.kana&&it.kana!==it.face?it.kana+" · "+it.romaji:it.romaji)+"</i>"];
+  }));
   const caught=r.cIds||[];
   $("dCatchBlock").hidden=!caught.length;
   rowsInto($("dCatchRows"),caught.map(id=>{
@@ -4578,7 +4770,7 @@ function startRun(scored){
   const sRef=pickSent(l);
   run={scored,lesson:l,gIdx:l%GROUPS.length,g:GROUPS[l%GROUPS.length],sRef,sent:sentFor(sRef),
        newIds:nw,dueIds:[],plan,step:-1,
-       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,r6:0,r6max:0,cIds:[],
+       r1:0,r2:0,r2max:0,r3:0,r4:0,r4max:0,r5:0,r5max:0,r6:0,r6max:0,cIds:[],missed:[],
        bonus:0,flashGot:0,flashN:0,mode:null,qs:[],qi:0};
   buildPips(plan.length);
   $("pips").hidden=false;
@@ -4595,6 +4787,8 @@ function refresh(){
 }
 $("go").onclick=()=>startRun(true);
 $("again").onclick=()=>startRun(false);
+$("glOpen").onclick=()=>renderGloss(()=>{renderStart();show("sc-start")});
+$("glOpen2").onclick=()=>renderGloss(()=>refresh());
 
 try{if("speechSynthesis" in window){speechSynthesis.getVoices();
   speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
