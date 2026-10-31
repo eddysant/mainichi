@@ -1529,23 +1529,97 @@ function icsFor(hhmm){
     "DURATION:PT5M",
     "RRULE:FREQ=DAILY",
     "SUMMARY:毎日 Mainichi — today’s puzzle",
-    "DESCRIPTION:Fifty seconds of Japanese.\\n"+location.href,
+    "DESCRIPTION:A couple of minutes of Japanese.\\n"+location.href,
     "URL:"+location.href,
     "BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:PT0M",
     "DESCRIPTION:毎日 Mainichi — today’s puzzle",
     "END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
 }
+/* ---- a zip holding one file ----
+   The artifact viewer hands a visitor a file only in a fixed list of extensions, and
+   .ics is not one of them — but .zip is. A stored (uncompressed) zip of one small text
+   file is a few dozen bytes of header and no dependency, which is a cheaper price than
+   the published copy not being able to set the reminder at all. */
+const crc32=(()=>{
+  const T=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);T[n]=c>>>0}
+  return b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0};
+})();
+function zipOne(name,text){
+  const enc=new TextEncoder(), nb=enc.encode(name), db=enc.encode(text);
+  const crc=crc32(db), n=nb.length, z=db.length, out=[];
+  const u16=v=>out.push(v&255,(v>>8)&255);
+  const u32=v=>out.push(v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255);
+  const bytes=a=>{for(let i=0;i<a.length;i++)out.push(a[i])};
+  u32(0x04034b50); u16(20); u16(0); u16(0); u16(0); u16(0);   /* stored, no timestamp */
+  u32(crc); u32(z); u32(z); u16(n); u16(0); bytes(nb); bytes(db);
+  const cd=out.length;
+  u32(0x02014b50); u16(20); u16(20); u16(0); u16(0); u16(0); u16(0);
+  u32(crc); u32(z); u32(z); u16(n); u16(0); u16(0); u16(0); u16(0); u32(0); u32(0); bytes(nb);
+  const cdLen=out.length-cd;
+  u32(0x06054b50); u16(0); u16(0); u16(1); u16(1); u32(cdLen); u32(cd); u16(0);
+  return new Uint8Array(out);
+}
+/* Published as an artifact there is no anchor-click download — the viewer grants the
+   page a save, confirms the name, and may say no. Everything here is a rejection the
+   viewer can act on, so each code gets its own sentence rather than one "failed". */
+async function saveZipped(t){
+  let dl=null;
+  try{ dl=await window.claude.use("downloads") }catch(e){}
+  if(!dl)return{why:"unavailable"};
+  try{
+    await dl.save({filename:"mainichi-daily.zip",
+      data:new Blob([zipOne("mainichi-daily.ics",icsFor(t))],{type:"application/zip"})});
+    return{ok:true};
+  }catch(e){ return{why:(e&&e.code)||"unavailable"} }
+}
 function setupReminder(){
   const card=$("remindCard"), row=card.querySelector(".remind-row"), lead=card.querySelector(".note");
   card.hidden=false;
-  /* The artifact viewer only hands over files in a fixed set of formats, and
-     .ics is not one — so point at the installed copy rather than show a dead button. */
+  /* The artifact viewer hands over files only in a fixed list of extensions, and .ics
+     is not one of them. Zipped it is, so the alarm can be set here after all — at the
+     cost of one unpacking step, which the note has to be honest about. */
   if(inArtifact()){
+    /* The capability resolves on its own schedule and may never resolve at all, so the
+       card opens on the fallback and the control appears only once a save is known to
+       be possible. A button that turns out to do nothing is worse than a link. */
     row.hidden=true; $("remindNote").hidden=true;
     lead.className="note";
     lead.innerHTML='Set the daily alarm in the installed version — <a href="'+HOSTED+
       '" target="_blank" rel="noopener">'+HOSTED.replace(/^https:\/\//,"").replace(/\/$/,"")+
-      '</a> — which can hand your calendar the file.';
+      '</a> — which hands your calendar the file directly.';
+    (async()=>{
+      let dl=null;
+      try{ dl=await window.claude.use("downloads") }catch(e){}
+      if(!dl||card.hidden)return;
+      row.hidden=false;
+      lead.className="note";
+      lead.textContent="A repeating calendar alarm is the one thing that reliably interrupts a day. Set it once.";
+    })();
+    $("remindTime").value=P.remindAt||"08:00";
+    if(P.remindAt)$("remindBtn").textContent="Update reminder";
+    $("remindBtn").onclick=async()=>{
+      const t=$("remindTime").value||"08:00";
+      const n=$("remindNote"); n.hidden=false; n.className="note"; n.textContent="Asking…";
+      const r=await saveZipped(t);
+      if(r.ok){
+        P.remindAt=t; save();
+        $("remindBtn").textContent="Update reminder";
+        n.className="note good";
+        n.textContent="mainichi-daily.zip saved — unpack it and open mainichi-daily.ics "
+          +"to add a repeating "+t+" alarm. On iPhone, tap it in Files, then Add All.";
+        return;
+      }
+      if(r.why==="declined"){ n.className="note"; n.textContent="Nothing saved."; return }
+      if(r.why==="rate_limited"){ n.className="note"; n.textContent="One at a time — try that again in a moment."; return }
+      /* Saves are off in this view: the installed copy hands over the .ics directly. */
+      row.hidden=true;
+      n.className="note";
+      n.innerHTML='Saving files is switched off here. Set the alarm in the installed '
+        +'version — <a href="'+HOSTED+'" target="_blank" rel="noopener">'
+        +HOSTED.replace(/^https:\/\//,"").replace(/\/$/,"")+'</a> — which hands your '
+        +'calendar the file directly.';
+    };
     return;
   }
   row.hidden=false;

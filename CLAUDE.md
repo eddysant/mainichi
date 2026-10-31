@@ -303,6 +303,26 @@ There is none, deliberately, and that is why the reminder is a downloadable cale
 rather than a push notification. Real web push would need a server to hold subscriptions
 and a key pair; it has been offered and not accepted. Do not add it unprompted.
 
+**The artifact build publishes with `capabilities: {db: {}, user: {}, downloads: true}`.**
+A non-empty `capabilities` object is a *full-set* declaration — anything stored but not
+restated is revoked — so a publish that passes only `{downloads: true}` silently turns off
+cloud sync, and every player's progress stops following them between devices. Restate all
+three, or omit `capabilities` entirely to carry the stored set forward.
+
+`db` and `user` are the cloud save (`initCloud` writes `data/users/<id>/progress`).
+`downloads` is the reminder: the artifact viewer hands a visitor a file only in a fixed
+list of extensions and **`.ics` is not one of them**, so `zipOne()` wraps it in a stored
+(uncompressed) zip, which is on the list. That encoder is forty lines and no dependency —
+local header, central directory, EOCD, with a CRC32 table — and its output has been
+checked against `unzip -t` and Python's `zipfile`. Keep it that way rather than reaching
+for a zip library.
+
+The reminder card opens on the "use the installed version" link and only swaps in the
+time picker once `claude.use("downloads")` resolves non-null, because it may resolve late
+or never, and a button that turns out to do nothing is worse than a link. Each rejection
+code gets its own sentence: `declined` and `rate_limited` leave the control in place,
+anything else falls back to the link and offers no retry.
+
 Exactly one request goes to a third party: the Google Fonts stylesheet. A German court
 held in 2022 that embedding it without consent breaches the GDPR. For a personal site with
 one user it is academic; self-hosting the fonts or dropping them for the system stack
