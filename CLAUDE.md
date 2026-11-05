@@ -145,6 +145,49 @@ opening to its sentence and next review. It is reachable from the start card, th
 card and a miss. It lists **met items only** — the whole curriculum would be a spoiler,
 and a word's sentence uses words not yet taught.
 
+## Two rounds that a beginner could not win
+
+Both were reported as "entirely guessing", and both were, for reasons that measured
+cleanly. Neither is a difficulty setting to be tuned back up.
+
+**Round one hid the answer.** A clue row is `["ねこ","neko","cat"]` and the round showed
+the first two, revealing the English only once the category had been named — the meaning
+was the reward for a correct guess. But the thread between five words *is* their meaning:
+a learner who cannot yet read ねこ learns nothing from being told it says "neko", so the
+round was a blind pick between four categories. The meaning now shows with each clue as
+it turns over.
+
+**Its distractors could be true.** Most categories describe meaning, but "Katakana
+loanwords" and "The five vowels" describe the writing, and those cut across the rest:
+Clothing, Sports, Things with a screen and Things on a desk are each made entirely of
+katakana loanwords, so offering that category against them put two true answers on screen
+and marked one wrong. `alsoTrueOf()` in `r1()` filters them out, and `check-content.js`
+prints which groups have the clash so the filter cannot silently stop covering them.
+
+**Round four asked for characters never taught.** It picks a kanji word and asks for its
+reading on a kana keyboard. Measured against the hiragana stream's one-a-day:
+
+| day | hiragana taught | words it could ask | fully spellable | kana known in them |
+| --- | --- | --- | --- | --- |
+| 5 | 5 | 4 | 0% | 13% |
+| 10 | 10 | 9 | 11% | 32% |
+| 30 | 30 | 29 | 45% | 71% |
+| 46 | 46 | 45 | 100% | 100% |
+
+So for the first six weeks it asked learners to produce characters they had never seen,
+and it had been promoted to day one on the argument that production beats recognition —
+true, but not of a task that cannot be attempted. Two changes, which work together:
+
+- **The keyboard is the kana you have met, plus any the word needs, one tap each.** It
+  was the whole gojūon in two taps, consonant row then vowel, which demands knowing which
+  row a character lives in before you can type it — a later lesson than this round is
+  for. Day two is a three-key keyboard. Keys for characters not yet met are dashed.
+  Marks stay a second tap, because ず really is す with a mark.
+- **The reading is on screen while any character in the word is still unmet**, so the job
+  is finding the keys. Once every character has been taught it comes off and the word is
+  produced from its meaning, which is the real test. Scoring is identical either way — a
+  beginner has to be able to win the day, and the scaffold retires itself per word.
+
 ## Example sentences
 
 Every word carries one — all 415 words and all 75 loanwords, 490 in total, with no two

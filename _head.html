@@ -121,9 +121,12 @@ h2{font-size:1.125rem;line-height:1.35}
   writing-mode:horizontal-tb;word-break:break-all}
 .reveal{animation:drop .3s ease both}
 @keyframes drop{from{opacity:0;transform:translateY(-.4rem)}to{opacity:1;transform:none}}
-.romaji-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.375rem}
-.romaji-row span{font-size:.5625rem;text-align:center;color:var(--ink-faint);letter-spacing:.02em;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.romaji-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.375rem;align-items:start}
+/* the meaning is what the round is actually asking about, so it reads first and the
+   romaji sits under it */
+.romaji-row span{font-size:.6875rem;text-align:center;color:var(--ink-soft);
+  letter-spacing:.01em;line-height:1.3;overflow-wrap:anywhere}
+.romaji-row span i{display:block;font-style:normal;font-size:.5625rem;color:var(--ink-faint)}
 
 /* options */
 .opts{display:flex;flex-direction:column;gap:.5rem}
@@ -197,8 +200,17 @@ h2{font-size:1.125rem;line-height:1.35}
 /* a base kana waiting for its mark: placed, but not yet the answer */
 .wc.part{border-color:var(--rule-s);border-style:dashed;color:var(--ink-soft)}
 .wc.part::after{opacity:0}
+.read{font-family:var(--ja);font-size:1.375rem;text-align:center;color:var(--ink-soft);
+  letter-spacing:.1em;margin:0}
 .kbd{display:flex;flex-direction:column;gap:.3rem}
 .krow{display:grid;grid-template-columns:repeat(6,1fr);gap:.25rem}
+/* The kana this learner has met, five to a row as in the gojuon table. Once the whole
+   set is there that is ten rows, so the keys are tighter than the old row-and-vowel pair
+   — otherwise the marks fall below the fold on a phone, and a mark is always the tap
+   straight after a kana. */
+.krow.kgrid{grid-template-columns:repeat(5,1fr);gap:.2rem}
+.krow.kgrid .key{padding:.38rem .1rem;font-size:1.0625rem}
+.key.fresh{border-style:dashed;color:var(--ink-soft)}
 .krow.kvow{grid-template-columns:repeat(5,1fr);min-height:2.6rem}
 .krow.kmods{grid-template-columns:repeat(4,1fr)}
 .key{padding:.6rem .15rem;border:2px solid var(--line);background:transparent;border-radius:2px;
@@ -367,6 +379,7 @@ h2{font-size:1.125rem;line-height:1.35}
   <!-- round four: write it from memory -->
   <section class="card" id="sc-write" hidden>
     <div><div class="eyebrow" id="wEyebrow">Round four · write it</div><h2 id="wEn"></h2></div>
+    <p class="read" id="wRead" hidden></p>
     <div class="wline" id="wCells"></div>
     <p class="note" id="wNote"></p>
     <div class="kbd">

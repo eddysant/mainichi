@@ -68,13 +68,24 @@ KW.forEach(w=>{
 
 /* every grouping answer must be offerable, and every katakana clue teachable */
 const cats=new Set(CATEGORIES);
+const KATA_GROUPS=[], VOWEL_GROUPS=[];
 GROUPS.forEach(g=>{
   if(!cats.has(g.answer)) bad.push("group answer not in CATEGORIES: "+g.answer);
   if(g.clues.length!==5) bad.push("not 5 clues: "+g.answer);
   g.clues.forEach(c=>{
     if(/^[\u30a0-\u30ff\u30fc]+$/.test(c[0])&&!kwSeen.has(c[0]))
       bad.push("group word not in KATA_WORDS: "+c[0]+" ("+g.answer+")");
+    if(!c[2]||!String(c[2]).trim())
+      bad.push("clue with no meaning: "+c[0]+" ("+g.answer+") — the round shows it, and without it the question cannot be answered");
   });
+  /* Two of the categories describe the writing rather than the meaning, and those cut
+     across the rest: every clue in Clothing is also a katakana loanword. The round
+     filters such a category out of the distractors, but a group whose own answer is one
+     of them while another also fits would still be unanswerable, so it is named here. */
+  const alsoKata=g.answer!=="Katakana loanwords"&&g.clues.every(c=>/^[\u30a0-\u30ff\u30fc\u31f0-\u31ff]+$/.test(c[0]));
+  const alsoVowel=g.answer!=="The five vowels"&&g.clues.every(c=>"あいうえお".indexOf(c[0])>=0);
+  if(alsoKata)KATA_GROUPS.push(g.answer);
+  if(alsoVowel)VOWEL_GROUPS.push(g.answer);
 });
 
 /* every reading must be typeable on the round-four keyboard */
@@ -179,7 +190,9 @@ if(bad.length){ console.log("PROBLEMS ("+bad.length+"):"); [...new Set(bad)].for
 console.log("content OK");
 console.log("  "+W.length+" words \u2014 romaji re-derived from kana and matching, readings, meanings and faces unique, all typeable");
 console.log("  "+KA.length+" hiragana / "+KT.length+" katakana, aligned; "+KW.length+" loanwords, all katakana");
-console.log("  "+GROUPS.length+" grouping puzzles, every answer a real category");
+console.log("  "+GROUPS.length+" grouping puzzles, every answer a real category, every clue carrying its meaning");
+console.log("  "+(KATA_GROUPS.length+VOWEL_GROUPS.length)+" of them are also true of a writing-based category "
+  +"(\"Katakana loanwords\": "+KATA_GROUPS.join(", ")+") — r1() must keep filtering those out of the distractors");
 console.log("  "+Object.keys(USAGE||{}).length+" example sentences \u2014 one per word, none shared, each containing its word");
 console.log("  "+BUILD.length+" round-three tile puzzles \u2014 every one rejoining to its sentence, "
   +new Set(BUILD.map(b=>b.pattern)).size+" distinct patterns");

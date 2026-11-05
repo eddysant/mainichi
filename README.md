@@ -10,15 +10,18 @@ home-screen apps are exempt, and the streak is the whole point.
 
 ## The day
 
-1. **Find the thread** — five words turn over one at a time; name what they share.
+1. **Find the thread** — five words turn over one at a time, each with what it means;
+   name what they share.
 2. **Recall** — today's new items first, then whatever is due for review. Everything is
    asked both ways round, so a kanji word comes up for its meaning and for its reading,
    and the card that teaches it says so. Get one wrong and it opens up to be read
    properly, then comes back before the round ends.
 3. **Build the sentence** — tap the words into order. The tiles show only Japanese; the
    English appears when you tap a wrong one, which is where the teaching happens.
-4. **Write it from memory** — one word a day, spelled on a two-tap kana keyboard with no
-   options to pick from. A wrong kana is refused where you tap it.
+4. **Write it from memory** — one word a day, spelled on a kana keyboard holding the
+   characters you've met, one tap each. A wrong kana is refused where you tap it. While a
+   word still contains a character you haven't been taught, its reading is on screen and
+   the job is finding the keys; once you know every character in it, the reading comes off.
 5. **Hear it** — the word is spoken by the device's Japanese voice and you pick it from
    words chosen for sounding close. Opens at a 21-day streak, or day 75.
 

@@ -106,9 +106,10 @@ const ROUNDS=[
   {key:"write", day:1, ja:"四", name:"Write it from memory",
    blurb:"Spell one word you know on a kana keyboard — no options to choose from.",
    why:"Every other round gives you the answer somewhere on the screen. This one asks you to produce the word with nothing to recognise, which is the only way either of us finds out whether you know it.",
-   how:["Tap a consonant row, then a vowel — the gojuon grid, two taps per kana.",
-        "゙ and ゚ add the marks; 小 shrinks the last kana to っ or ゃ.",
-        "A wrong kana is refused where you tap it, so you never fill in a whole wrong word."]},
+   how:["The keyboard holds the kana you have met, plus any this word needs — one tap each.",
+        "゙ and ゚ add the marks; 小 shrinks the last kana to っ or ゃ. ず is す and a mark.",
+        "A wrong kana is refused where you tap it, so you never fill in a whole wrong word.",
+        "While a word still has a character you have not met, its reading is on screen."]},
   {key:"listen",day:75, streak:21, ja:"五", name:"Hear it",
    blurb:"Pick the word you heard, from words that sound alike.",
    why:"Everything so far has been silent. The hardest part of Japanese on the day you need it is catching a word said at speed.",
@@ -548,7 +549,17 @@ function unlockCard(key){
   $("uGo").onclick=()=>STEP[key]();
 }
 
-/* ---- round 1: grouping ---- */
+/* ---- round 1: grouping ----
+   A wrong answer has to be wrong. Most of the categories describe meaning, but two
+   describe the writing instead, and those cut across the others: four of the groups —
+   Clothing, Sports, Things with a screen, Things on a desk — are made entirely of
+   katakana loanwords, so offering that category against them puts two true answers on
+   screen and marks one of them wrong. `check-content.js` enforces the same rule, so a
+   new group cannot quietly reintroduce the clash. */
+const KATA_ONLY=/^[\u30A0-\u30FF\uFF66-\uFF9F]+$/;
+const alsoTrueOf=(cat,g)=>
+  (cat==="Katakana loanwords"&&g.clues.every(c=>KATA_ONLY.test(c[0])))||
+  (cat==="The five vowels"&&g.clues.every(c=>"あいうえお".indexOf(c[0])>=0));
 function r1(){
   show("sc-group"); pip(0,"live");
   const g=run.g, cells=$("gCells"), rom=$("gRomaji"), box=$("gOpts");
@@ -559,12 +570,17 @@ function r1(){
     d.innerHTML='<span class="ja"></span>'; cells.appendChild(d);
     rom.appendChild(document.createElement("span"));
   });
+  /* The clue rows carry an English meaning and the round used to withhold it until
+     after the category had been named, handing it over as the reward for a correct
+     guess. But the thread between five words IS their meaning: a learner who cannot yet
+     read ねこ learns nothing from being told it says "neko", and the question becomes a
+     blind pick between four categories. The meaning is the puzzle, not the prize. */
   function paint(){
     [...cells.children].forEach((d,i)=>{
       if(i<revealed&&!d.classList.contains("filled")){
         d.classList.add("filled","reveal");
         d.querySelector(".ja").textContent=g.clues[i][0];
-        rom.children[i].textContent=g.clues[i][1];
+        rom.children[i].innerHTML=esc(g.clues[i][2])+'<i>'+esc(g.clues[i][1])+'</i>';
       }
     });
   }
@@ -574,7 +590,7 @@ function r1(){
   $("gNote").textContent="Guess early for more points. A wrong guess turns over the next word.";
   $("gNext").hidden=true;
   box.className="opts"; box.innerHTML="";
-  shuffle([g.answer].concat(pick(CATEGORIES.filter(c=>c!==g.answer),3))).forEach(o=>{
+  shuffle([g.answer].concat(pick(CATEGORIES.filter(c=>c!==g.answer&&!alsoTrueOf(c,g)),3))).forEach(o=>{
     const b=document.createElement("button");
     b.className="opt"; b.textContent=o;
     b.onclick=()=>{
@@ -583,7 +599,6 @@ function r1(){
         solved=true; revealed=g.clues.length; paint();
         b.classList.add("right");
         [...box.children].forEach(x=>{x.disabled=true;if(x!==b&&!x.classList.contains("wrong"))x.classList.add("dim")});
-        g.clues.forEach((c,i)=>{rom.children[i].textContent=c[2]});
         run.r1=Math.max(1,5-wrong);
         $("gNote").className="note good";
         $("gNote").innerHTML="<b>"+esc(g.answer)+"</b> — "+run.r1+" of 5.";
@@ -908,6 +923,10 @@ const KROWS=[
   ["あ","あいうえお"],["か","かきくけこ"],["さ","さしすせそ"],["た","たちつてと"],["な","なにぬねの"],
   ["は","はひふへほ"],["ま","まみむめも"],["や","やゆよ"],["ら","らりるれろ"],["わ","わを"],["ん","ん"]
 ];
+/* The same table read straight through: the keyboard shows kana in this order so the
+   grid a learner sees on day three is the top-left corner of the one they will see on
+   day forty-six, in the same places. */
+const GOJUON=KROWS.reduce((a,r)=>a+r[1],"");
 const DAKU={"か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご","さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
   "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど","は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ"};
 const HANDAKU={"は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ"};
@@ -951,7 +970,7 @@ function nextWrite(){
   $("wEyebrow").textContent="Round four · write it "+(run.wi+1)+" of "+run.wIds.length;
   $("wEn").textContent=it.en;
   $("wNext").hidden=true;
-  let typed="", slips=0, shown=false, done=false, row=null;
+  let typed="", slips=0, shown=false, done=false;
   /* A kana that carries a mark is typed in two taps — す then ゛ for ず — so the base
      has to be allowed to stand while it waits for its mark. It is held here rather than
      appended, because until the mark lands it is not the kana that was asked for, and
@@ -962,6 +981,22 @@ function nextWrite(){
   const BASE=c=>{for(const k in DAKU)if(DAKU[k]===c)return k;
     for(const k in HANDAKU)if(HANDAKU[k]===c)return k;
     for(const k in SMALL)if(SMALL[k]===c)return k;return c};
+
+  /* Which hiragana this learner has actually been taught. The round used to ask for
+     whole words regardless: on day five none of the words it could ask were spellable
+     from the five kana taught by then, and it stayed that way until the set finished
+     around day forty-six. Asking someone to produce a character they have never seen is
+     not a hard round, it is an impossible one. */
+  const metKana=new Set(Object.keys(P.srs).filter(id=>id[0]==="k").map(id=>id.slice(1)));
+  const needed=[...want].map(c=>BASE(c));
+  const unmet=needed.filter(c=>!metKana.has(c));
+  /* While any character in it is still unknown, the reading is on screen and the job is
+     to find the keys. Once every character has been taught, it comes off and the word
+     has to be produced from its meaning, which is the real test. Scoring is the same
+     either way — a beginner has to be able to win the day. */
+  const scaffold=unmet.length>0;
+  $("wRead").hidden=!scaffold;
+  if(scaffold)$("wRead").textContent=want;
 
   const cells=$("wCells");
   function paint(){
@@ -1039,28 +1074,24 @@ function nextWrite(){
     $("wNote").className="note"; $("wNote").textContent="";
   }
 
-  /* the keyboard: consonant row, then vowel, then the marks */
-  const vows=$("wVows"), mods=$("wMods");
-  function drawVows(){
-    vows.innerHTML="";
-    if(row===null)return;
-    for(const c of KROWS[row][1]){
-      const b=document.createElement("button");
-      b.className="key"; b.type="button"; b.textContent=c;
-      b.onclick=()=>put(c);
-      vows.appendChild(b);
-    }
-  }
-  const rows=$("wRows"); rows.innerHTML="";
-  KROWS.forEach((r,i)=>{
+  /* ---- the keyboard ----
+     It used to be the whole gojūon in two taps: pick a consonant row, then a vowel.
+     That asks the learner to know which row a character lives in before they can type
+     it, which is a later lesson than the one this round is for. Now it is one tap on a
+     grid of the characters they have met — two keys on day two — plus whatever today's
+     word needs, so the task is always completable. The marks stay a second tap, because
+     ず really is す with a mark, and that is worth knowing. */
+  const keys=$("wRows"), mods=$("wMods");
+  keys.className="krow kgrid";
+  $("wVows").hidden=true; $("wVows").innerHTML="";
+  keys.innerHTML="";
+  GOJUON.split("").filter(c=>metKana.has(c)||needed.indexOf(c)>=0).forEach(c=>{
     const b=document.createElement("button");
-    b.className="key"; b.type="button"; b.textContent=r[0];
-    b.onclick=()=>{
-      row=i;
-      [...rows.children].forEach((x,j)=>x.classList.toggle("sel",j===i));
-      if(r[1].length===1)put(r[0]); else drawVows();
-    };
-    rows.appendChild(b);
+    b.className="key"+(metKana.has(c)?"":" fresh");
+    b.type="button"; b.textContent=c;
+    if(!metKana.has(c))b.title="new — you have not met this one yet";
+    b.onclick=()=>put(c);
+    keys.appendChild(b);
   });
   mods.innerHTML="";
   [["゛","daku"],["゜","handaku"],["小","small"],["⌫","del"]].forEach(([label,kind])=>{
@@ -1106,7 +1137,7 @@ function nextWrite(){
     };
     mods.appendChild(b);
   });
-  row=null; drawVows(); paint();
+  paint();
   $("wNote").className="note";
   $("wNote").textContent="Spell the reading. "+want.length+" kana.";
   $("wNext").onclick=()=>{run.wi++;nextWrite()};
