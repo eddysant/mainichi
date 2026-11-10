@@ -154,6 +154,7 @@ on screen as though being shown a character once meant being able to read it.
 
 | round | what a non-reader saw | now |
 | --- | --- | --- |
+| find the thread | kana, romaji and (briefly) English | kana and romaji; English only after solving — by request |
 | recall, word → meaning | 水 over みず; コーヒー with nothing under it | the romaji, while any character is unknown |
 | recall, kanji → reading | a bare kanji over four hiragana options | the meaning, and romaji under each option |
 | recall, meaning → word | four options in katakana | romaji under each option |
@@ -195,12 +196,12 @@ Rules that follow from the same review:
 Both were reported as "entirely guessing", and both were, for reasons that measured
 cleanly. Neither is a difficulty setting to be tuned back up.
 
-**Round one hid the answer.** A clue row is `["ねこ","neko","cat"]` and the round showed
-the first two, revealing the English only once the category had been named — the meaning
-was the reward for a correct guess. But the thread between five words *is* their meaning:
-a learner who cannot yet read ねこ learns nothing from being told it says "neko", so the
-round was a blind pick between four categories. The meaning now shows with each clue as
-it turns over.
+**Round one shows the sound, not the meaning — the learner's call, do not reverse it.**
+A clue row is `["ねこ","neko","cat"]`. Showing the English with each clue was tried
+(2026-11-04) and rejected by the learner a week later as too easy: with "shirt, trousers,
+coat" on screen there is nothing left to work out. Each clue turns over with its romaji
+only, and the meanings appear together once the thread is named. This is the one round
+where less help is the deliberate setting.
 
 **Its distractors could be true.** Most categories describe meaning, but "Katakana
 loanwords" and "The five vowels" describe the writing, and those cut across the rest:

@@ -10,8 +10,8 @@ home-screen apps are exempt, and the streak is the whole point.
 
 ## The day
 
-1. **Find the thread** — five words turn over one at a time, each with what it means;
-   name what they share.
+1. **Find the thread** — five words turn over one at a time, each with how it is said;
+   name what they share. The meanings appear once you have.
 2. **Recall** — today's new items first, then whatever is due for review. Everything is
    asked both ways round, so a kanji word comes up for its meaning and for its reading,
    and the card that teaches it says so. Get one wrong and it opens up to be read
