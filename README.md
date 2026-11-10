@@ -16,8 +16,8 @@ home-screen apps are exempt, and the streak is the whole point.
    asked both ways round, so a kanji word comes up for its meaning and for its reading,
    and the card that teaches it says so. Get one wrong and it opens up to be read
    properly, then comes back before the round ends.
-3. **Build the sentence** — tap the words into order. The tiles show only Japanese; the
-   English appears when you tap a wrong one, which is where the teaching happens.
+3. **Build the sentence** — tap the words into the order Japanese says them. Every tile
+   shows what it means and how it is said; the order is the puzzle.
 4. **Write it from memory** — one word a day, spelled on a kana keyboard holding the
    characters you've met, one tap each. A wrong kana is refused where you tap it. While a
    word still contains a character you haven't been taught, its reading is on screen and
@@ -25,9 +25,8 @@ home-screen apps are exempt, and the streak is the whole point.
 5. **Hear it** — the word is spoken by the device's Japanese voice and you pick it from
    words chosen for sounding close. Opens at a 21-day streak, or day 75.
 
-Three extra rounds drop in on their own schedule: a six-second **catch-up** every seventh
-day, which asks the things nearest the edge of forgetting rather than the things due
-today; a **flashback** every tenth day sweeping the block you have just lived through; and
+Three extra rounds drop in on their own schedule: a **catch-up** every seventh day, which
+asks the things nearest the edge of forgetting rather than the things due today; a **flashback** every tenth day sweeping the block you have just lived through; and
 a **lightning round** you earn by scoring 85% or better three days running. The last two
 add to your score but not to the maximum, so they are pure upside.
 
@@ -36,6 +35,14 @@ the locked ones with the day they open — the thing you are building towards is
 from day one. **Everything you've met** is a tap away from the start screen, from the
 day's card, and from any answer you got wrong: the whole list, each item opening to its
 example sentence and when it comes round next.
+
+## Built for someone who can't read it yet
+
+Nothing on screen assumes you can read kana. Anything written in a character you haven't
+shown you know carries its romaji — question prompts, answer options, sentence tiles,
+keyboard keys, example sentences — and the romaji drops away character by character as
+you get each one right, and comes back if you start missing it. Every recall question has
+an **I don't know — show me** button, which is always a better answer than a guess.
 
 ## It teaches as fast as it can keep taught
 

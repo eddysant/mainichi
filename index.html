@@ -177,7 +177,7 @@ h2{font-size:1.125rem;line-height:1.35}
 .tile{display:flex;flex-direction:column;align-items:center;gap:.05rem;line-height:1.2;cursor:pointer;
   font-family:var(--ja);font-size:1.0625rem;padding:.4rem .6rem;border:1px solid var(--rule-s);
   border-radius:2px;background:transparent}
-.tile .g{font-family:var(--ui);font-size:.5625rem;letter-spacing:.02em;color:var(--ink-faint)}
+.tile .g{font-family:var(--ui);font-size:.6875rem;letter-spacing:.01em;color:var(--ink-soft)}
 .tile:hover{border-color:var(--pop)}
 .tile.used{visibility:hidden}
 .tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
@@ -292,6 +292,15 @@ h2{font-size:1.125rem;line-height:1.35}
   color:var(--ink-soft);line-height:1.6}
 .gl-det .ja{display:block;font-family:var(--ja);font-size:1rem;color:var(--ink)}
 .gl-det i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
+/* how something is said, wherever the learner cannot read it yet */
+.ro{display:block;font-family:var(--ui);font-size:.6875rem;font-style:normal;letter-spacing:.04em;
+  color:var(--ink-faint);line-height:1.3;text-decoration:none}
+.opt .ro{margin-top:.15rem}
+.key .ro{font-size:.5625rem;line-height:1.1}
+.tile .ro{font-size:.5625rem}
+.read .ro{letter-spacing:.12em;margin-top:.1rem}
+.face .aid{font-size:.875rem;letter-spacing:.08em;color:var(--ink-soft)}
+.face .sub.gloss{font-family:var(--ui);font-size:.9375rem;color:var(--ink-soft)}
 .sent{font-family:var(--ja);font-size:1.125rem;line-height:1.6}
 .foot{text-align:center;font-size:.75rem;color:var(--ink-faint);line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -351,8 +360,10 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="face">
       <div class="big" id="rBig">水</div>
       <div class="sub" id="rSub"></div>
+      <div class="aid" id="rAid" hidden></div>
     </div>
     <div class="opts" id="rOpts"></div>
+    <div class="btn-row"><button class="btn quiet" id="rSkip">I don’t know — show me</button></div>
     <p class="note" id="rNote"></p>
   </section>
 
@@ -387,6 +398,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div class="krow kvow" id="wVows"></div>
       <div class="krow kmods" id="wMods"></div>
     </div>
+    <div class="btn-row"><button class="btn quiet" id="wShow" hidden>I don’t know — show me</button></div>
     <button class="btn" id="wNext" hidden>Next</button>
   </section>
 
@@ -402,10 +414,11 @@ h2{font-size:1.125rem;line-height:1.35}
   <section class="card bonus" id="sc-bonus" hidden>
     <div><div class="eyebrow" id="xEyebrow">Bonus round · lightning</div><h2 id="xQ">What does this mean?</h2></div>
     <div class="timer"><span id="xBar"></span></div>
-    <div class="face"><div class="big" id="xBig"></div></div>
+    <div class="face"><div class="big" id="xBig"></div><div class="aid" id="xAid" hidden></div></div>
     <div class="opts grid2" id="xOpts"></div>
     <p class="note" id="xNote"></p>
     <button class="btn seal" id="xGo" hidden>Start the lightning round</button>
+    <div class="btn-row"><button class="btn quiet" id="xSkip" hidden>Not today</button></div>
     <button class="btn" id="xDone" hidden>See today’s card</button>
   </section>
 
@@ -3306,11 +3319,11 @@ const BONUS_ROUND={key:"bonus",ja:"雷",name:"Lightning",
    above: it has nothing to teach, so it can start as soon as there is anything to
    come back to. */
 const RECAP_ROUND={key:"recap",ja:"復",name:"Catch up",
-  blurb:"Six quick questions on words you met a while ago.",
+  blurb:"Six questions on things you met a while ago. No clock.",
   why:"Round two asks what the schedule says is due today. Once a week this goes behind that and pulls back the things nearest the edge of forgetting — words you learned, got right, and have not seen since.",
-  how:["Six questions, six seconds each, two answers — quick fire, not a thinking round.",
+  how:["Six questions, asked the same way as round two, with no clock.",
        "They are the items whose review falls soonest, never today’s new ones.",
-       "It scores like any other round, and a miss only moves a word back one step rather than all the way to the start."]};
+       "If you do not know one, say so — it shows you the card and brings it back."]};
 /* Every tenth day, a look back over the ten just gone — the block you have actually
    been living in, asked again in one sitting. No clock: the catch-up and the lightning
    round are both speed, and a third fast round would say the only thing that matters is
@@ -3409,6 +3422,83 @@ function grade(id,ok,soft){
   s.due=P.plays+IV[s.box];
 }
 
+/* ---- can this learner read it yet ----
+   Every round was reviewed against one question: what does someone who knows no
+   Japanese see here, and can they do anything with it but guess? Most failed the same
+   way. Kana were put on screen as if being introduced to a character once meant being
+   able to read it — as question prompts, as answer options, as puzzle tiles — so the
+   round turned into matching shapes, or tapping until something went green.
+   So reading is treated as something earned per character, and everything else leans
+   on it: a character counts as readable once it has been answered cold twice running
+   (box READ_BOX), and until then anything written with it carries its romaji. A miss
+   drops the character back and the romaji returns. Nothing here is a setting; the
+   help fades at the speed the learner actually learns. */
+const READ_BOX=2;
+const SMALL_OF={"ぁ":"あ","ぃ":"い","ぅ":"う","ぇ":"え","ぉ":"お","っ":"つ","ゃ":"や","ゅ":"ゆ","ょ":"よ","ゎ":"わ",
+  "ァ":"ア","ィ":"イ","ゥ":"ウ","ェ":"エ","ォ":"オ","ッ":"ツ","ャ":"ヤ","ュ":"ユ","ョ":"ヨ","ヮ":"ワ"};
+const isHira=c=>c>="\u3041"&&c<="\u3096", isKata=c=>c>="\u30A1"&&c<="\u30FA";
+function reads(c){
+  if(!isHira(c)&&!isKata(c))return true;          /* ー, punctuation, kanji: not a kana to know */
+  const base=(SMALL_OF[c]||c).normalize("NFD")[0];
+  const s=P.srs[(isKata(c)?"t":"k")+(SMALL_OF[base]||base)];
+  return !!s&&(s.box||0)>=READ_BOX;
+}
+const needsAid=text=>[...String(text||"")].some(c=>!reads(c));
+
+/* Kana to romaji, in the spelling the content set uses (long vowels written out,
+   small tsu doubling the next consonant). Sentences and conjugated tiles have no
+   stored romaji, so it has to be derived; a word that has one stored uses that. */
+const ROMA={"あ":"a","い":"i","う":"u","え":"e","お":"o","か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko",
+  "が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go","さ":"sa","し":"shi","す":"su","せ":"se","そ":"so",
+  "ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo","た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to",
+  "だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do","な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no",
+  "は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho","ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo",
+  "ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po","ま":"ma","み":"mi","む":"mu","め":"me","も":"mo",
+  "や":"ya","ゆ":"yu","よ":"yo","ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro","わ":"wa","を":"o","ん":"n"};
+const ROMA_Y={"ゃ":"ya","ゅ":"yu","ょ":"yo"};
+function romaOf(text){
+  const k=[...String(text)].map(c=>isKata(c)?String.fromCharCode(c.charCodeAt(0)-0x60):c);
+  let out="";
+  for(let i=0;i<k.length;i++){
+    const c=k[i], nx=k[i+1];
+    if(c==="ー"){ const v=out.match(/[aiueo]$/); if(!v)return ""; out+=v[0]; continue }
+    if(c==="っ"){ const n=ROMA[nx]||""; out+=n[0]==="c"?"t":(n[0]||""); continue }
+    if(ROMA_Y[c])continue;
+    if(c==="。"||c==="、"||c==="？"||c==="！")continue;
+    let r=ROMA[c];
+    if(r===undefined)return "";                    /* a combination it does not know: say nothing */
+    if(nx&&ROMA_Y[nx]&&r.length>1&&r.slice(-1)==="i"){
+      const stem=r.slice(0,-1);
+      r=(stem==="sh"||stem==="ch"||stem==="j")?stem+ROMA_Y[nx].slice(1):stem+ROMA_Y[nx];
+    }
+    out+=r;
+  }
+  return out;
+}
+const STORED_ROMA=new Map();
+WORDS.forEach(w=>{STORED_ROMA.set(w[1],w[2]);STORED_ROMA.set(w[0],w[2])});
+KATA_WORDS.forEach(w=>STORED_ROMA.set(w[0],w[1]));
+/* one tile of a sentence: は, へ and を are said wa, e and o when they are particles */
+function tileRoma(t){
+  if(t[0]==="。")return "";
+  if(t[0]==="は"&&t[2]==="topic marker")return "wa";
+  if(t[0]==="へ"&&t[2]==="toward")return "e";
+  return STORED_ROMA.get(t[0])||romaOf(t[0]);
+}
+const sentRoma=tiles=>tiles.map(tileRoma).filter(Boolean).join(" ");
+/* the romaji of an item's example sentence, by way of the tiles it was split into */
+function usageRoma(it){
+  /* an item's own id field is positional; puzzles are keyed by stream and face */
+  const b=bPool().find(x=>x.id===(it.type==="loanword"?"v":"w")+it.face);
+  return b?sentRoma(b.tiles):"";
+}
+/* An example sentence as it is shown everywhere: Japanese, how it is said, what it
+   means. The middle line is there until the learner can read every character in it. */
+function exHtml(it,ex){
+  const ro=needsAid(ex[0])?usageRoma(it):"";
+  return '<span class="ja">'+esc(ex[0])+'</span>'+(ro?'<span class="ro">'+esc(ro)+'</span>':"")+esc(ex[1]);
+}
+
 /* ---- round 2 questions ---- */
 /* ---- distractors that compete ----
    Wrong answers used to be picked uniformly at random, and that quietly made the whole
@@ -3495,8 +3585,11 @@ function mkQ(id){
     /* a loanword carries no separate reading, so there is no bracket to show: the
        old test asked whether the face WAS the reading, which left "コーヒー ()" */
     const read=it.kana&&it.kana!==it.face?" ("+it.kana+")":"";
+    /* 水 with みず under it is two things a beginner cannot read, and コーヒー had
+       nothing under it at all. The sound is not the answer here, so it is shown for as
+       long as any character in the reading is still unknown. */
     return{id,q:"What does this mean?",big:it.face,sub:kanaOnly?"":it.kana,opts,answer:it.en,
-      grid:false,ja:false,
+      grid:false,ja:false,aid:needsAid(it.kana||it.face)?it.romaji:"",
       after:it.face+read+" — "+it.en+(it.note?" · "+it.note:"")};
   }
   /* A word written only in kana IS its own reading, so asking how it is read would be a
@@ -3508,22 +3601,37 @@ function mkQ(id){
     const pool=it.type==="loanword"?it.set:it.set.filter(shape);
     const pre=it.type==="loanword"?"v":"w";
     const cands=pool.filter(w=>w[0]!==it.face).map(w=>({id:rowId(pre,w),row:w}));
-    const opts=shuffle([it.face].concat(metFirst(cands,3,o=>{
+    const near=metFirst(cands,3,o=>{
       const w=o.row; let sc=wordScore(it)(w);
       if(w[0][0]===it.face[0]) sc+=3;
       if(w[0].length===it.face.length) sc+=2;
       return sc;
-    }).map(o=>o.row[0])));
+    }).map(o=>o.row);
+    const opts=shuffle([it.face].concat(near.map(w=>w[0])));
+    /* Four answers written in a script the learner cannot read are four identical
+       answers. Each option says how it is read until its characters are known. */
+    const optAid={}, ro=w=>it.type==="loanword"?w[1]:w[2];
+    if(needsAid(it.face))optAid[it.face]=it.romaji;
+    near.forEach(w=>{ if(needsAid(w[0]))optAid[w[0]]=ro(w) });
     return{id,q:"Which word is this?",big:it.en,gloss:true,
-      sub:it.type==="loanword"?"katakana":"hiragana",subRoman:true,
+      sub:it.type==="loanword"?"katakana":"hiragana",subRoman:true,optAid,
       opts,answer:it.face,grid:true,ja:true,after:it.en+" = "+it.face+" ("+it.romaji+")"};
   }
   /* the soundalike scoring already existed, and was only ever used by the listening
      round — a reading question whose wrong answers sound nothing alike is the same
      mistake it was written to prevent */
   const rc=WORDS.filter(w=>w[1]!==it.kana).map(w=>({id:rowId("w",w),row:w}));
-  const opts=shuffle([it.kana].concat(metFirst(rc,3,o=>soundScore(it.kana)(o.row)).map(o=>o.row[1])));
-  return{id,q:"How is this read?",big:it.face,sub:"",opts,answer:it.kana,grid:true,ja:true,
+  const near=metFirst(rc,3,o=>soundScore(it.kana)(o.row)).map(o=>o.row);
+  const opts=shuffle([it.kana].concat(near.map(w=>w[1])));
+  /* This one used to show a bare kanji over four readings in hiragana: nothing to say
+     what the word was, and answers a beginner could not tell apart. The meaning is not
+     what is being asked, so it is given; and each reading carries its romaji until its
+     characters are known. Knowing that 水 is "mizu" is still the whole question. */
+  const optAid={};
+  if(needsAid(it.kana))optAid[it.kana]=it.romaji;
+  near.forEach(w=>{ if(needsAid(w[1]))optAid[w[1]]=w[2] });
+  return{id,q:"How is this read?",big:it.face,sub:it.en,subGloss:true,optAid,
+    opts,answer:it.kana,grid:true,ja:true,
     after:it.face+" = "+it.kana+" ("+it.romaji+") — "+it.en};
 }
 
@@ -3559,7 +3667,7 @@ function renderGloss(back){
       d.appendChild(a); d.appendChild(b);
       const det=document.createElement("div"); det.className="gl-det"; det.hidden=true;
       const gap=Math.max(0,(s.due||0)-(P.plays||0));
-      det.innerHTML=(ex?'<span class="ja">'+esc(ex[0])+"</span>"+esc(ex[1])+"<br>":"")
+      det.innerHTML=(ex?exHtml(it,ex)+"<br>":"")
         +"<i>"+(gap===0?"due now":"due in "+gap+(gap===1?" day":" days"))
         +" · box "+((s.box||0)+1)+" of "+IV.length+"</i>";
       d.onclick=()=>{det.hidden=!det.hidden};
@@ -3699,7 +3807,7 @@ function renderStart(){
    explainer card before it rather than dropping the player into a mechanic they have
    never seen. */
 const STEP={group:()=>r1(),recall:()=>teach(),build:()=>r3(),write:()=>r4(),listen:()=>r5(),
-  recap:()=>rQF("recap"),flash:()=>rFlash(),bonus:()=>rQF("bonus")};
+  recap:()=>rRecap(),flash:()=>rFlash(),bonus:()=>rQF("bonus")};
 function nextStep(){
   run.step++;
   const key=run.plan[run.step];
@@ -3815,7 +3923,7 @@ function teach(){
        and only where one is written — no placeholder when there is none. */
     const ex=usageFor(it);
     $("tEx").hidden=!ex;
-    if(ex)$("tEx").innerHTML='<span class="ja">'+esc(ex[0])+'</span>'+esc(ex[1]);
+    if(ex)$("tEx").innerHTML=exHtml(it,ex);
     /* Both directions, named. The round asks a character for its sound and then its
        sound for the character, and a word for its meaning and then its reading — and
        the second of each used to arrive cold, with nothing having ever shown it that
@@ -3847,7 +3955,7 @@ function lookAgain(id,next,last){
   $("tEn").innerHTML="<b>"+esc(it.en)+"</b>"+(it.note?" · "+esc(it.note):"");
   const ex=usageFor(it);
   $("tEx").hidden=!ex;
-  if(ex)$("tEx").innerHTML='<span class="ja">'+esc(ex[0])+'</span>'+esc(ex[1]);
+  if(ex)$("tEx").innerHTML=exHtml(it,ex);
   $("tDirs").textContent=last
     ? "It comes back sooner than it would have, and it is in the list below."
     : "It comes round again before the end of today.";
@@ -3900,8 +4008,22 @@ function rFlash(){
   run.r2n=ids.length; run.retry=[]; run.retried=false;
   nextQ();
 }
+/* The catch-up used to be six seconds a question with two answers and nothing on screen
+   but the word. For someone who cannot yet read it, that is a coin toss against a clock:
+   the timer removes the one thing that could have turned a guess into an attempt. A
+   review of what is about to be forgotten is the last place to add pressure, so it is
+   asked like round two — four answers, the same reading help, a card on a miss. */
+const RECAP_N=6;
+function rRecap(){
+  const ids=recapIds(RECAP_N);
+  if(!ids.length){pip(run.step,"done");return nextStep()}
+  run.mode="recap"; run.qs=ids.map(mkQ); run.qi=0;
+  run.cIds=ids; run.r6=0; run.r6max=ids.length;
+  run.r2n=ids.length; run.retry=[]; run.retried=false;
+  nextQ();
+}
 function nextQ(){
-  const flash=run.mode==="flash";
+  const flash=run.mode==="flash", recap=run.mode==="recap";
   if(run.qi>=run.qs.length){
     /* Everything missed comes round once more before the round ends — the one place a
        second look costs nothing and is worth everything. Not scored and not graded
@@ -3915,7 +4037,7 @@ function nextQ(){
     }
     if(run.qi>=run.qs.length){
       pip(run.step,"done");
-      if(flash)run.mode=null;
+      run.mode=null;
       return nextStep();
     }
   }
@@ -3923,27 +4045,29 @@ function nextQ(){
   show("sc-recall"); pip(run.step,"live");
   $("rEyebrow").textContent=q.retry
     ? "One more look · "+(run.qi+1-run.r2n)+" of "+(run.qs.length-run.r2n)
-    : (flash?"Flashback · ":"Round two · recall ")+(run.qi+1)+" of "+run.r2n;
+    : (flash?"Flashback · ":recap?"Catch up · ":"Round two · recall ")+(run.qi+1)+" of "+run.r2n;
   $("rQ").textContent=q.q;
   $("rBig").textContent=q.big; $("rBig").className="big"+(q.roman?" roman":"")+(q.gloss?" gloss":"");
   $("rSub").textContent=q.sub||""; $("rSub").hidden=!q.sub;
-  $("rSub").className="sub"+(q.subRoman?" roman":"");
+  $("rSub").className="sub"+(q.subRoman?" roman":"")+(q.subGloss?" gloss":"");
+  $("rAid").textContent=q.aid||""; $("rAid").hidden=!q.aid;
   $("rNote").textContent=""; $("rNote").className="note";
   box.className="opts"+(q.grid?" grid2":""); box.innerHTML="";
   let answered=false;
-  q.opts.forEach(o=>{
-    const b=document.createElement("button");
-    b.className="opt"+(q.ja?" ja":""); b.textContent=o;
-    b.onclick=()=>{
+  /* `picked` is the button tapped, or null when the learner said they did not know —
+     which is an answer, and a better one than a guess: it cannot be right by luck, so
+     it cannot push an unknown word out of the schedule. */
+  const settle=(picked,o)=>{
       if(answered)return; answered=true;
-      const ok=(o===q.answer);
+      $("rSkip").hidden=true;
+      const ok=(o===q.answer), b=picked;
       [...box.children].forEach(x=>{
         x.disabled=true;
-        if(x.textContent===q.answer)x.classList.add("right");
+        if(x.dataset.v===q.answer)x.classList.add("right");
         else if(x===b)x.classList.add("wrong");
         else x.classList.add("dim");
       });
-      if(ok&&!q.retry)flash?run.flashGot++:run.r2++;
+      if(ok&&!q.retry){ if(flash)run.flashGot++; else if(recap)run.r6++; else run.r2++ }
       /* No clock here, so a miss is a real one and grades like any other — except on
          the two kinds of question that are not tests of memory: the check that a new
          item's card was read, and the second look at something already marked wrong. */
@@ -3961,10 +4085,19 @@ function nextQ(){
       /* Long enough to see which one was right, then the card, which waits. */
       if(!q.retry)run.retry.push(q);
       (run.missed=run.missed||[]).indexOf(q.id)<0&&run.missed.push(q.id);
-      setTimeout(()=>lookAgain(q.id,()=>{run.qi++;nextQ()},!!q.retry),1100);
-    };
+      setTimeout(()=>lookAgain(q.id,()=>{run.qi++;nextQ()},!!q.retry),picked?1100:500);
+  };
+  q.opts.forEach(o=>{
+    const b=document.createElement("button");
+    b.className="opt"+(q.ja?" ja":""); b.dataset.v=o;
+    b.appendChild(document.createTextNode(o));
+    const ro=(q.optAid||{})[o];
+    if(ro){const r=document.createElement("span"); r.className="ro"; r.textContent=ro; b.appendChild(r)}
+    b.onclick=()=>settle(b,o);
     box.appendChild(b);
   });
+  $("rSkip").hidden=false;
+  $("rSkip").onclick=()=>settle(null,null);
 }
 
 /* ---- which sentence round three gets ----
@@ -3996,10 +4129,15 @@ function pickSent(l){
 }
 
 /* ---- round 3: build ----
-   The old version hid the word meanings AND the word order, so the only strategy
-   left was permuting until it turned green. Now every tile carries its meaning,
-   every slot states the job it wants, and a wrong tap is refused on the spot with
-   the reason — which is where the grammar actually gets taught. */
+   What this round teaches is where the words go: the thing acted on before the verb,
+   the particle after the word it marks, the verb last. That can only be worked out by
+   someone who knows what each tile is. For a while the meanings were held back until a
+   wrong tap, on the argument that a glossed tile could be placed without reading it —
+   which is true, and which left a learner who cannot read kana with a tray of identical
+   squiggles and one way to find out what they were: get it wrong. A clue that has to be
+   bought with a mistake is trial and error by design. Every tile now says what it means
+   from the start, and how it is said until its characters are known; the order is still
+   theirs to work out, and a wrong tap is still refused with the reason. */
 function r3(){
   show("sc-build"); pip(run.step,"live");
   const s=run.sent, T=s.tiles, slots=$("bSlots"), tray=$("bTray");
@@ -4007,7 +4145,7 @@ function r3(){
   $("bEn").textContent=s.en;
   $("bPattern").textContent=s.pattern;
   $("bWhy").className="note"; $("bWhy").textContent=s.note;
-  $("bNote").className="note"; $("bNote").textContent="Tap each word into the slot that wants it.";
+  $("bNote").className="note"; $("bNote").textContent="Tap the words in the order Japanese says them. Each slot names what it wants.";
   $("bDone").hidden=true;
   slots.innerHTML=""; tray.innerHTML="";
 
@@ -4024,11 +4162,11 @@ function r3(){
     const t=T[i], b=document.createElement("button");
     b.className="tile"; b.type="button"; b.dataset.idx=i;
     const j=document.createElement("span"); j.textContent=t[0]; b.appendChild(j);
-    /* The English stays hidden until a wrong tap. With every tile glossed and every slot
-       labelled, the puzzle could be solved by matching "water" to "object" without
-       reading any Japanese — so the gloss arrives where the teaching already happens. */
-    if(t[1]){const g=document.createElement("span"); g.className="g"; g.textContent=t[1];
-      g.hidden=true; b.appendChild(g)}
+    const ro=needsAid(t[0])?tileRoma(t):"";
+    if(ro){const r=document.createElement("span"); r.className="ro"; r.textContent=ro; b.appendChild(r)}
+    /* a particle has no translation, so it says the job it does instead */
+    const gloss=t[1]||(t[0]==="。"?"":t[2]);
+    if(gloss){const g=document.createElement("span"); g.className="g"; g.textContent=gloss; b.appendChild(g)}
     b.onclick=()=>place(b,i);
     tray.appendChild(b);
     return b;
@@ -4037,12 +4175,10 @@ function r3(){
   const markNext=()=>slotEls.forEach((d,i)=>d.classList.toggle("next",i===at&&!done));
   const says=r=>ROLE_SAY[r]||r;
 
-  const showGlosses=()=>tray.querySelectorAll("span.g").forEach(g=>{g.hidden=false});
   function place(btn,i){
     if(done||btn.classList.contains("used"))return;
     if(i!==at){
       slips++;
-      showGlosses();
       btn.classList.add("bad");
       setTimeout(()=>btn.classList.remove("bad"),340);
       const got=T[i], gotP=PARTICLES[got[0]], wantP=PARTICLES[T[at][0]];
@@ -4163,14 +4299,24 @@ function nextWrite(){
      not a hard round, it is an impossible one. */
   const metKana=new Set(Object.keys(P.srs).filter(id=>id[0]==="k").map(id=>id.slice(1)));
   const needed=[...want].map(c=>BASE(c));
-  const unmet=needed.filter(c=>!metKana.has(c));
-  /* While any character in it is still unknown, the reading is on screen and the job is
-     to find the keys. Once every character has been taught, it comes off and the word
-     has to be produced from its meaning, which is the real test. Scoring is the same
-     either way — a beginner has to be able to win the day. */
-  const scaffold=unmet.length>0;
-  $("wRead").hidden=!scaffold;
-  if(scaffold)$("wRead").textContent=want;
+  /* While any character in it is one the learner cannot yet read, the word is on screen
+     — in kana and in romaji — and the job is to find the keys. "Cannot yet read" is the
+     same test every other round uses, not merely "has been introduced": a character
+     shown on a card last week and missed since is not one to be produced from nothing.
+     Once every character is known the word comes off and has to be produced from its
+     meaning, which is the real test.
+     The points are the same either way, because a beginner has to be able to win the
+     day; but copying a word is not remembering it, so a copied word leaves its review
+     date alone rather than being pushed out as if it had been recalled. */
+  const scaffold=needsAid(want);
+  const reveal=()=>{ $("wRead").hidden=false;
+    $("wRead").innerHTML=esc(want)+'<span class="ro">'+esc(it.romaji)+'</span>' };
+  $("wRead").hidden=true;
+  if(scaffold)reveal();
+  /* Without the scaffold the only help used to be earned by failing three times. */
+  $("wShow").hidden=scaffold;
+  $("wShow").onclick=()=>{ if(done)return; shown=true; reveal(); $("wShow").hidden=true;
+    $("wNote").className="note"; $("wNote").textContent="There it is. Spell it out once so your hands have done it." };
 
   const cells=$("wCells");
   function paint(){
@@ -4231,7 +4377,8 @@ function nextWrite(){
     done=true;
     const pts=shown?0:slips===0?2:1;
     run.r4=(run.r4||0)+pts;
-    if(run.scored)grade(run.wIds[run.wi],slips===0&&!shown);
+    $("wShow").hidden=true;
+    if(run.scored&&!scaffold)grade(run.wIds[run.wi],slips===0&&!shown);
     $("wNote").className="note "+(pts===2?"good":"bad");
     $("wNote").textContent=it.face+" = "+want+" ("+it.romaji+") — "+it.en
       +" · "+(pts===2?"clean, 2 of 2":pts===1?"1 of 2":"0 of 2, but you have seen it written now");
@@ -4262,8 +4409,9 @@ function nextWrite(){
   GOJUON.split("").filter(c=>metKana.has(c)||needed.indexOf(c)>=0).forEach(c=>{
     const b=document.createElement("button");
     b.className="key"+(metKana.has(c)?"":" fresh");
-    b.type="button"; b.textContent=c;
-    if(!metKana.has(c))b.title="new — you have not met this one yet";
+    b.type="button"; b.appendChild(document.createTextNode(c));
+    /* a key the learner cannot read yet says its sound, so finding "mi" is possible */
+    if(!reads(c)){const r=document.createElement("span"); r.className="ro"; r.textContent=ROMA[c]||""; b.appendChild(r)}
     b.onclick=()=>put(c);
     keys.appendChild(b);
   });
@@ -4405,13 +4553,17 @@ function nextListen(){
   shuffle([it].concat(soundalikes(it.kana,3).map(w=>({face:w[0],kana:w[1],romaji:w[2],en:w[3]}))))
     .forEach(o=>{
       const b=document.createElement("button");
-      b.className="opt ja"; b.type="button"; b.textContent=o.kana;
+      b.className="opt ja"; b.type="button"; b.dataset.v=o.kana;
+      b.appendChild(document.createTextNode(o.kana));
+      /* Hearing "mizu" and being shown four words in a script you cannot read is not a
+         listening test. Telling mizu from michi by ear still is. */
+      if(needsAid(o.kana)){const r=document.createElement("span"); r.className="ro"; r.textContent=o.romaji; b.appendChild(r)}
       b.onclick=()=>{
         if(answered)return; answered=true;
         const ok=o.kana===it.kana;
         [...box.children].forEach(x=>{
           x.disabled=true;
-          if(x.textContent===it.kana)x.classList.add("right");
+          if(x.dataset.v===it.kana)x.classList.add("right");
           else if(x===b)x.classList.add("wrong");
           else x.classList.add("dim");
         });
@@ -4478,11 +4630,7 @@ const QF={
   bonus:{n:8,ms:4000,extra:true,ids:bonusIds,ja:"雷",label:"Bonus round",
     eyebrow:"Bonus round · lightning",lead:"Three strong days running",
     intro:"Eight questions, four seconds each, two answers to choose from. Every one you get is a point on top — missing them all still cannot cost you anything.",
-    go:"Start the lightning round"},
-  recap:{n:6,ms:6000,extra:false,ids:recapIds,ja:"復",label:"Catch up",
-    eyebrow:"Catch up · every seventh day",lead:"Things you met a while ago",
-    intro:"Six questions, six seconds each, from what you have not seen for a while. They count towards today’s score like any other round, and a miss only nudges a word back one step rather than all the way to the start.",
-    go:"Start the catch-up"}
+    go:"Start the lightning round"}
 };
 function xq(id){
   /* Two options and four seconds: this is recall at speed, not a thinking round, so
@@ -4504,6 +4652,7 @@ function xq(id){
   const cands=it.set.filter(w=>mean(w)!==it.en).map(w=>({id:rowId(pre,w),row:w}));
   const other=metFirst(cands,1,o=>wordScore(it)(o.row))[0].row;
   return{big:it.face,ja:false,opts:shuffle([it.en,mean(other)]),answer:it.en,
+    aid:needsAid(it.kana||it.face)?it.romaji:"",
     after:it.face+" — "+it.en};
 }
 function rQF(key){
@@ -4517,14 +4666,18 @@ function rQF(key){
   $("xEyebrow").textContent=c.eyebrow;
   $("xQ").textContent=c.lead;
   $("xBig").textContent=c.ja;
+  $("xAid").hidden=true;
   $("xNote").className="note";
   $("xNote").textContent=c.intro;
+  /* A speed round is a reward, not a lesson, and nobody should have to take a reward. */
+  $("xSkip").hidden=false;
+  $("xSkip").onclick=()=>{$("xSkip").hidden=true;$("xGo").hidden=true;pip(run.step,"done");nextStep()};
   $("xOpts").innerHTML="";
   $("xBar").className="";
   $("xDone").hidden=true;
   $("xGo").hidden=false;
   $("xGo").textContent=c.go;
-  $("xGo").onclick=()=>{$("xGo").hidden=true;nextQF()};
+  $("xGo").onclick=()=>{$("xGo").hidden=true;$("xSkip").hidden=true;nextQF()};
 }
 let xTimer=null;
 function nextQF(){
@@ -4536,6 +4689,7 @@ function nextQF(){
   $("xEyebrow").textContent=c.label+" · "+(f.i+1)+" of "+f.ids.length;
   $("xQ").textContent="Quick — what is this?";
   $("xBig").textContent=q.big;
+  $("xAid").textContent=q.aid||""; $("xAid").hidden=!q.aid;
   $("xNote").className="note"; $("xNote").innerHTML="";
   tally();
   const bar=$("xBar");
@@ -4579,6 +4733,7 @@ function endQF(){
   $("xEyebrow").textContent=c.label+" · done";
   $("xQ").textContent=f.got+" of "+n;
   $("xBig").textContent=f.got===n?"全":f.got>=n/2?"好":"次";
+  $("xAid").hidden=true;
   $("xOpts").innerHTML="";
   $("xNote").className="note "+(f.got?"good":"");
   if(c.extra){
@@ -4665,7 +4820,10 @@ function renderDone(r,scored){
   }));
   const used=(r.newIds||[]).map(id=>[item(id),usageFor(item(id))]).filter(x=>x[1]);
   $("dUseBlock").hidden=!used.length;
-  rowsInto($("dUseRows"),used.map(([it,ex])=>[ex[0],esc(ex[1])]));
+  rowsInto($("dUseRows"),used.map(([it,ex])=>{
+    const ro=needsAid(ex[0])?usageRoma(it):"";
+    return [ex[0],(ro?'<span class="ro">'+esc(ro)+'</span>':"")+esc(ex[1])];
+  }));
   [...$("dUseRows").children].forEach(d=>d.querySelector(".l").classList.add("ja-ex"));
   const practised=(r.newIds||[]).concat(r.dueIds||[]);
   rowsInto($("dDueRows"),practised.map(id=>{
@@ -4701,7 +4859,8 @@ function renderDone(r,scored){
   /* older saves carry a plain index into the hand-written set */
   const s=sentFor(r.sRef!=null?r.sRef:handRef(r.sIdx||0));
   $("dSent").textContent=s.tiles.map(t=>t[0]).join("");
-  $("dSentEn").textContent=s.en;
+  const sRo=needsAid($("dSent").textContent)?sentRoma(s.tiles):"";
+  $("dSentEn").innerHTML=(sRo?'<span class="ro">'+esc(sRo)+'</span>':"")+esc(s.en);
   $("dSentWhy").innerHTML="<b>"+esc(s.pattern)+"</b> — "+esc(s.note);
   setupReminder();
   $("dFoot").textContent="Day "+(P.lesson+1)+" ("+"第"+jaNum(P.lesson+1)+"日"+") unlocks tomorrow."

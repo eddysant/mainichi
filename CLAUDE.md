@@ -145,6 +145,51 @@ opening to its sentence and next review. It is reachable from the start card, th
 card and a miss. It lists **met items only** — the whole curriculum would be a spoiler,
 and a word's sentence uses words not yet taught.
 
+## The test every round has to pass
+
+**The learner is a beginner who cannot reliably read kana. For every screen, ask what
+someone who knows no Japanese sees, and whether they can do anything with it but guess.**
+Reviewed that way (2026-11-09) most rounds failed, and all for one reason: kana were put
+on screen as though being shown a character once meant being able to read it.
+
+| round | what a non-reader saw | now |
+| --- | --- | --- |
+| recall, word → meaning | 水 over みず; コーヒー with nothing under it | the romaji, while any character is unknown |
+| recall, kanji → reading | a bare kanji over four hiragana options | the meaning, and romaji under each option |
+| recall, meaning → word | four options in katakana | romaji under each option |
+| build the sentence | a tray of kana tiles, meanings shown only *after a wrong tap* | every tile: kana, romaji, meaning |
+| write it | the reading in kana only, unlabelled keys | reading in kana and romaji, keys that say their sound |
+| hear it | four options in hiragana | romaji under each option |
+| catch-up | a bare word, two options, six seconds | no clock; asked like recall |
+| example sentences | kana and English | kana, romaji, English |
+
+Reading is earned per character and everything leans on that. `reads(c)` is true once the
+character's own schedule entry reaches `READ_BOX` (two cold passes running);
+`needsAid(text)` is true while any character in it has not. Romaji appears wherever
+`needsAid` says so and nowhere else, so the help fades at the speed the learner actually
+learns and comes back after a miss. **Do not add a round, a prompt or an option list that
+prints kana without going through `needsAid`.** The character questions themselves (あ →
+which sound) are the only place it cannot apply, because there the sound is the answer.
+
+Rules that follow from the same review:
+
+- **A clue must never cost a mistake.** Round three used to reveal tile meanings on a
+  wrong tap and the write round gave its hint after three slips. Both made failing the
+  only way to be taught. Meanings are on the tiles from the start; the write round has an
+  "I don't know — show me" button.
+- **"I don't know" is an answer.** Recall has a button for it. It counts as a miss and
+  opens the card, and unlike a guess it cannot be right by luck — so it cannot push an
+  unknown word out of the schedule.
+- **Copying is not recalling.** When the write round shows the reading, the points still
+  count (a beginner has to be able to win the day) but the word's review date is left
+  alone, the same way a `fresh` question's is.
+- **No clock on anything that teaches.** The catch-up was a coin toss against a timer; it
+  now runs through `nextQ` as `run.mode="recap"`. Only the lightning round is timed, and
+  it is a reward that can be skipped ("Not today"), scores only upward and never grades.
+- Sentence romaji comes from the sentence's own tiles (`sentRoma`), so は, へ and を are
+  written wa, e and o exactly where they are particles. `romaOf()` was checked against
+  all 415 stored readings with no mismatch; words with stored romaji use that instead.
+
 ## Two rounds that a beginner could not win
 
 Both were reported as "entirely guessing", and both were, for reasons that measured
@@ -187,6 +232,7 @@ true, but not of a task that cannot be attempted. Two changes, which work togeth
   is finding the keys. Once every character has been taught it comes off and the word is
   produced from its meaning, which is the real test. Scoring is identical either way — a
   beginner has to be able to win the day, and the scaffold retires itself per word.
+  ("Unmet" was later tightened to "not yet readable" — see `needsAid` above.)
 
 ## Example sentences
 
@@ -227,8 +273,9 @@ contention: だれ scored 132 words alike, so the round offered ねこ and い�
 now scores zero, and the options come from met words first. The catch-up and the
 lightning round picked their single wrong answer uniformly at random, so on day seven the
 catch-up asked 猫 against "to begin", a word from day 340. With two options an unmet
-answer is not a distractor but a pointer at the other one; they now use the same scored,
-met-first pool as round two.
+answer is not a distractor but a pointer at the other one; the lightning round now uses
+the same scored, met-first pool as round two, and the catch-up is no longer a two-option
+round at all.
 
 Recognition still cannot prove recall, which is why one word a day is spelled out with
 nothing on screen to recognise. Writing used to be gated behind a streak, until the gate

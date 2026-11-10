@@ -177,7 +177,7 @@ h2{font-size:1.125rem;line-height:1.35}
 .tile{display:flex;flex-direction:column;align-items:center;gap:.05rem;line-height:1.2;cursor:pointer;
   font-family:var(--ja);font-size:1.0625rem;padding:.4rem .6rem;border:1px solid var(--rule-s);
   border-radius:2px;background:transparent}
-.tile .g{font-family:var(--ui);font-size:.5625rem;letter-spacing:.02em;color:var(--ink-faint)}
+.tile .g{font-family:var(--ui);font-size:.6875rem;letter-spacing:.01em;color:var(--ink-soft)}
 .tile:hover{border-color:var(--pop)}
 .tile.used{visibility:hidden}
 .tile.bad{animation:shake .3s;border-color:var(--no);color:var(--no)}
@@ -292,6 +292,15 @@ h2{font-size:1.125rem;line-height:1.35}
   color:var(--ink-soft);line-height:1.6}
 .gl-det .ja{display:block;font-family:var(--ja);font-size:1rem;color:var(--ink)}
 .gl-det i{font-style:normal;color:var(--ink-faint);font-size:.75rem;letter-spacing:.04em}
+/* how something is said, wherever the learner cannot read it yet */
+.ro{display:block;font-family:var(--ui);font-size:.6875rem;font-style:normal;letter-spacing:.04em;
+  color:var(--ink-faint);line-height:1.3;text-decoration:none}
+.opt .ro{margin-top:.15rem}
+.key .ro{font-size:.5625rem;line-height:1.1}
+.tile .ro{font-size:.5625rem}
+.read .ro{letter-spacing:.12em;margin-top:.1rem}
+.face .aid{font-size:.875rem;letter-spacing:.08em;color:var(--ink-soft)}
+.face .sub.gloss{font-family:var(--ui);font-size:.9375rem;color:var(--ink-soft)}
 .sent{font-family:var(--ja);font-size:1.125rem;line-height:1.6}
 .foot{text-align:center;font-size:.75rem;color:var(--ink-faint);line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -351,8 +360,10 @@ h2{font-size:1.125rem;line-height:1.35}
     <div class="face">
       <div class="big" id="rBig">水</div>
       <div class="sub" id="rSub"></div>
+      <div class="aid" id="rAid" hidden></div>
     </div>
     <div class="opts" id="rOpts"></div>
+    <div class="btn-row"><button class="btn quiet" id="rSkip">I don’t know — show me</button></div>
     <p class="note" id="rNote"></p>
   </section>
 
@@ -387,6 +398,7 @@ h2{font-size:1.125rem;line-height:1.35}
       <div class="krow kvow" id="wVows"></div>
       <div class="krow kmods" id="wMods"></div>
     </div>
+    <div class="btn-row"><button class="btn quiet" id="wShow" hidden>I don’t know — show me</button></div>
     <button class="btn" id="wNext" hidden>Next</button>
   </section>
 
@@ -402,10 +414,11 @@ h2{font-size:1.125rem;line-height:1.35}
   <section class="card bonus" id="sc-bonus" hidden>
     <div><div class="eyebrow" id="xEyebrow">Bonus round · lightning</div><h2 id="xQ">What does this mean?</h2></div>
     <div class="timer"><span id="xBar"></span></div>
-    <div class="face"><div class="big" id="xBig"></div></div>
+    <div class="face"><div class="big" id="xBig"></div><div class="aid" id="xAid" hidden></div></div>
     <div class="opts grid2" id="xOpts"></div>
     <p class="note" id="xNote"></p>
     <button class="btn seal" id="xGo" hidden>Start the lightning round</button>
+    <div class="btn-row"><button class="btn quiet" id="xSkip" hidden>Not today</button></div>
     <button class="btn" id="xDone" hidden>See today’s card</button>
   </section>
 
