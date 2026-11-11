@@ -165,7 +165,7 @@ on screen as though being shown a character once meant being able to read it.
 | example sentences | kana and English | kana, romaji, English |
 
 Reading is earned per character and everything leans on that. `reads(c)` is true once the
-character's own schedule entry reaches `READ_BOX` (two cold passes running);
+character's own schedule entry reaches `READ_BOX` (box 4 — right four times running);
 `needsAid(text)` is true while any character in it has not. Romaji appears wherever
 `needsAid` says so and nowhere else, so the help fades at the speed the learner actually
 learns and comes back after a miss. **Do not add a round, a prompt or an option list that
@@ -174,6 +174,10 @@ which sound) are the only place it cannot apply, because there the sound is the 
 
 Rules that follow from the same review:
 
+- **Round three shows romaji on every tile, always** — not gated by `needsAid`. The
+  learner reported it "useless" once the romaji had faded: knowing characters one at a
+  time is not reading a whole word at a glance, and the round is about word order, not
+  decoding. Placed tiles keep their romaji too, so the finished sentence reads back.
 - **A clue must never cost a mistake.** Round three used to reveal tile meanings on a
   wrong tap and the write round gave its hint after three slips. Both made failing the
   only way to be taught. Meanings are on the tiles from the start; the write round has an

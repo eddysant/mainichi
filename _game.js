@@ -242,11 +242,14 @@ function grade(id,ok,soft){
    able to read it — as question prompts, as answer options, as puzzle tiles — so the
    round turned into matching shapes, or tapping until something went green.
    So reading is treated as something earned per character, and everything else leans
-   on it: a character counts as readable once it has been answered cold twice running
-   (box READ_BOX), and until then anything written with it carries its romaji. A miss
-   drops the character back and the romaji returns. Nothing here is a setting; the
-   help fades at the speed the learner actually learns. */
-const READ_BOX=2;
+   on it: a character counts as readable once it has climbed to box READ_BOX — right
+   four times running, across about a week — and until then anything written with it
+   carries its romaji. A miss drops the character back and the romaji returns. The bar
+   was two at first, and that was too low twice over: two passes is not reading, and
+   saves from before the wrong answers were made to compete carry boxes that were
+   earned by guessing. Nothing here is a setting; the help fades at the speed the
+   learner actually learns. */
+const READ_BOX=4;
 const SMALL_OF={"ぁ":"あ","ぃ":"い","ぅ":"う","ぇ":"え","ぉ":"お","っ":"つ","ゃ":"や","ゅ":"ゆ","ょ":"よ","ゎ":"わ",
   "ァ":"ア","ィ":"イ","ゥ":"ウ","ェ":"エ","ォ":"オ","ッ":"ツ","ャ":"ヤ","ュ":"ユ","ョ":"ヨ","ヮ":"ワ"};
 const isHira=c=>c>="\u3041"&&c<="\u3096", isKata=c=>c>="\u30A1"&&c<="\u30FA";
@@ -977,7 +980,12 @@ function r3(){
     const t=T[i], b=document.createElement("button");
     b.className="tile"; b.type="button"; b.dataset.idx=i;
     const j=document.createElement("span"); j.textContent=t[0]; b.appendChild(j);
-    const ro=needsAid(t[0])?tileRoma(t):"";
+    /* Always, not only while a character is unknown. Knowing あ, め and り one at a time
+       is not the same as reading あめり at a glance, and this round is about where words
+       go, not about decoding them: a learner who has to stop and sound out each tile has
+       no attention left for the order. Everywhere else the romaji fades per character;
+       here it stays. */
+    const ro=tileRoma(t);
     if(ro){const r=document.createElement("span"); r.className="ro"; r.textContent=ro; b.appendChild(r)}
     /* a particle has no translation, so it says the job it does instead */
     const gloss=t[1]||(t[0]==="。"?"":t[2]);
@@ -1007,7 +1015,10 @@ function r3(){
     }
     btn.classList.add("used");
     slotEls[at].classList.add("filled");
-    slotEls[at].querySelector(".box").textContent=T[at][0];
+    /* the placed word keeps its sound, so the finished sentence can be read back */
+    const placed=slotEls[at].querySelector(".box"), pr=tileRoma(T[at]);
+    placed.textContent=T[at][0];
+    if(pr){const r=document.createElement("span"); r.className="ro"; r.textContent=pr; placed.appendChild(r)}
     at++; markNext();
     if(at===T.length){
       done=true;
